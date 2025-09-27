@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Commute Windows - SmartCache AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>📍 Commute Windows</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCommuteModal">
+        + Add Window
+    </button>
+</div>
+
+{% if commutes %}
+<div class="row g-3">
+    {% for commute in commutes %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="card-title">{{ commute.label }}</h5>
+                        <p class="card-text">
+                            <i class="bi bi-clock"></i> 
+                            {{ commute.start_time|time:"g:i A" }} - {{ commute.end_time|time:"g:i A" }}
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                {{ commute.days_of_week|join:", " }}
+                            </small>
+                        </p>
+                    </div>
+                    <div>
+                        {% if commute.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div class="fs-1 mb-3">⏰</div>
+    <h4>No Commute Windows Yet</h4>
+    <p class="text-muted mb-4">Add your first commute window to start getting personalized content</p>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCommuteModal">
+        Create Your First Window
+    </button>
+</div>
+{% endif %}
+
+<!-- Add Commute Modal (placeholder) -->
+<div class="modal fade" id="addCommuteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Commute Window</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Form implementation coming soon. For now, use the admin interface to add commute windows.</p>
+                <a href="/admin/core/commutewindow/add/" class="btn btn-outline-primary" target="_blank">
+                    Open Admin
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

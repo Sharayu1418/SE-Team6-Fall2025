@@ -1,0 +1,70 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.so
+*.egg-info/
+*.egg
+db.sqlite3
+media/
+staticfiles/
+.env
+.env.*
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Logs
+*.log
+*.pot
+*.mo
+*.tmp
+*.swp
+*.swo
+
+# Node / Frontend
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+.pnpm-debug.log
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# Deployment
+*.bak
+*.orig
+*.rej
+*.tar.gz
+*.zip
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage / Testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.tox/
+.pytest_cache/
