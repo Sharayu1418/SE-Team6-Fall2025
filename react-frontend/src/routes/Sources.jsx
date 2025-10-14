@@ -7,7 +7,7 @@ export default function Sources({ onDownloadSuccess }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const YOUR_AUTH_TOKEN = 'c2dd7b4b6867b18fa6089224437b875e2a5a12e9';
+    const YOUR_AUTH_TOKEN = import.meta.env.VITE_SOME_API_KEY;
 
     async function fetchSources() {
       try {

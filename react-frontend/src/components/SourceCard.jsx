@@ -21,7 +21,7 @@ export default function SourceCard({ source, onDownloadSuccess }) {
   const handleSubscribeToggle = async () => {
     setIsSubmitting(true);
     
-    const YOUR_AUTH_TOKEN = 'c2dd7b4b6867b18fa6089224437b875e2a5a12e9';
+    const YOUR_AUTH_TOKEN = import.meta.env.VITE_SOME_API_KEY;
     const API_URL = 'http://localhost:8000/api/subscriptions/';
     
     try {
