@@ -103,7 +103,8 @@ class CommuteWindowViewSet(viewsets.ModelViewSet):
 class ContentSourceViewSet(viewsets.ModelViewSet):
     queryset = ContentSource.objects.filter(is_active=True)
     serializer_class = ContentSourceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    ordering = ['created_at']
 
 class SubscriptionViewSet(viewsets.ModelViewSet):
     serializer_class = SubscriptionSerializer
