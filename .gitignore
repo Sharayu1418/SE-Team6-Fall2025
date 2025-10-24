@@ -1,39 +1,49 @@
-# Python / Django
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.pyc
-*.so
-*.egg-info/
-*.egg
-db.sqlite3
-media/
-staticfiles/
+# ==============================================================================
+# Environment & Secrets (DO NOT COMMIT THESE)
+# ==============================================================================
 .env
 .env.*
 
+# ==============================================================================
+# Python / Django Backend (downloader_service)
+# ==============================================================================
 # Virtual environment
 .venv/
 venv/
 ENV/
 env/
 
-# Logs
-*.log
-*.pot
-*.mo
-*.tmp
-*.swp
-*.swo
+# Django files
+db.sqlite3
+media/
+staticfiles/
 
-# Node / Frontend
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+
+# ==============================================================================
+# Node / React Frontend (frontend)
+# ==============================================================================
+# Dependencies
 node_modules/
+
+# Production build folder
+build/
+
+# Debug logs
 npm-debug.log
 yarn-error.log
-package-lock.json
 .pnpm-debug.log
 
+# ==============================================================================
+# General Exclusions
+# ==============================================================================
 # OS-specific
 .DS_Store
 Thumbs.db
@@ -45,7 +55,26 @@ Thumbs.db
 *.sublime-project
 *.sublime-workspace
 
-# Deployment
+# Logs & Temporary Files
+*.log
+*.pot
+*.mo
+*.tmp
+*.swp
+*.swo
+
+# Coverage / Testing
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.pytest_cache/
+
+# Deployment / Archives
 *.bak
 *.orig
 *.rej
@@ -56,15 +85,3 @@ Thumbs.db
 *.pid
 *.seed
 *.pid.lock
-
-# Coverage / Testing
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.tox/
-.pytest_cache/
