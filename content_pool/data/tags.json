@@ -1,0 +1,119 @@
+{
+  "categories": {
+    "knowledge_learning": {
+      "display_name": "Knowledge & Learning",
+      "tags": [
+        "Technology",
+        "Artificial Intelligence",
+        "Machine Learning",
+        "Data Science",
+        "Startups",
+        "Productivity",
+        "Personal Finance",
+        "Investing",
+        "Science",
+        "Psychology",
+        "Career Growth",
+        "Economics",
+        "Health & Fitness",
+        "Self-Improvement",
+        "Education",
+        "Sustainability",
+        "Innovation"
+      ]
+    },
+    "entertainment_leisure": {
+      "display_name": "Entertainment & Leisure",
+      "tags": [
+        "Movies",
+        "TV Shows",
+        "Comedy",
+        "Music",
+        "Sports",
+        "Gaming",
+        "Pop Culture",
+        "Books & Literature",
+        "Food & Cooking",
+        "Travel Stories",
+        "True Crime",
+        "Documentaries",
+        "Stand-up",
+        "Fiction Podcasts",
+        "Lifestyle"
+      ]
+    },
+    "travel_exploration": {
+      "display_name": "Travel & Exploration",
+      "tags": [
+        "Travel Tips",
+        "Local Culture",
+        "History",
+        "Language Learning",
+        "Destination Guides",
+        "Adventure",
+        "Nature & Outdoors",
+        "Photography",
+        "World News"
+      ]
+    },
+    "mood_based": {
+      "display_name": "Mood-Based",
+      "tags": [
+        "Energizing",
+        "Relaxing",
+        "Motivational",
+        "Focus",
+        "Chill",
+        "Fun",
+        "Calm",
+        "Reflective",
+        "Uplifting"
+      ]
+    },
+    "work_productivity": {
+      "display_name": "Work & Productivity",
+      "tags": [
+        "Business",
+        "Leadership",
+        "Entrepreneurship",
+        "Remote Work",
+        "Technology Trends",
+        "Management",
+        "Finance",
+        "Marketing",
+        "Design Thinking",
+        "Product Management"
+      ]
+    },
+    "wellness_lifestyle": {
+      "display_name": "Wellness & Lifestyle",
+      "tags": [
+        "Mindfulness",
+        "Meditation",
+        "Relationships",
+        "Nutrition",
+        "Minimalism",
+        "Mental Health",
+        "Yoga",
+        "Sleep",
+        "Happiness"
+      ]
+    },
+    "meta_tags": {
+      "display_name": "Meta Tags",
+      "tags": [
+        "Short",
+        "Long-Form",
+        "Audio",
+        "Video",
+        "Article",
+        "New",
+        "Trending",
+        "Classic",
+        "Educational",
+        "Entertainment",
+        "Offline-Ready"
+      ]
+    }
+  }
+}

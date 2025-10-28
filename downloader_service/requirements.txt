@@ -18,3 +18,7 @@ six==1.17.0
 sqlparse==0.5.3
 urllib3==2.5.0
 yt-dlp==2025.10.22
+
+# MongoDB ODM for Django-side document storage (secondary DB)
+mongoengine==0.28.0
+pymongo==4.8.0
