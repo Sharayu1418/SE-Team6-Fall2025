@@ -71,19 +71,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'smartcache.wsgi.application'
 
 # Database
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('PG_DB', 'smartcache_db'),
+        'USER': os.getenv('PG_USER', 'postgres'),
+        'PASSWORD': os.getenv('PG_PASSWORD', 'StrongPassword123!'),
+        'HOST': os.getenv('PG_HOST', 'localhost'),
+        'PORT': os.getenv('PG_PORT', '5432'),
     }
-else:
-    # SQLite fallback for preview safety
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
