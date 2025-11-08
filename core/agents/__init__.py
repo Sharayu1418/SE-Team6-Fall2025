@@ -12,9 +12,11 @@ from .definitions import (
     create_content_download_agent,
     create_content_summarizer_agent,
     create_user_proxy,
-    OLLAMA_CONFIG,
+    create_ollama_client,
 )
-from .groupchat import create_groupchat, create_manager
+
+# TODO: Update groupchat.py for new AutoGen API (autogen-agentchat 0.7.5)
+# from .groupchat import create_groupchat, create_manager
 
 __all__ = [
     # Agent factory functions
@@ -23,10 +25,10 @@ __all__ = [
     "create_content_summarizer_agent",
     "create_user_proxy",
     # Configuration
-    "OLLAMA_CONFIG",
-    # GroupChat setup
-    "create_groupchat",
-    "create_manager",
+    "create_ollama_client",
+    # GroupChat setup (TODO: Update for new API)
+    # "create_groupchat",
+    # "create_manager",
 ]
 
 

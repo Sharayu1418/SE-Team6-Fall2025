@@ -8,14 +8,19 @@ Each agent has a specific role defined by its system_message.
 import logging
 
 try:
-    import autogen
-except ImportError:
-    try:
-        # Try newer autogen-agentchat import
-        from autogen_agentchat import autogen
-    except ImportError:
-        autogen = None
-        logging.warning("pyautogen not installed. Install with: pip install pyautogen")
+    from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+    from autogen_agentchat.messages import TextMessage
+    from autogen_agentchat.ui import Console
+    from autogen_ext.models.openai import OpenAIChatCompletionClient
+    from autogen_core.models import ModelCapabilities
+    autogen_available = True
+except ImportError as e:
+    AssistantAgent = None
+    UserProxyAgent = None
+    OpenAIChatCompletionClient = None
+    ModelCapabilities = None
+    autogen_available = False
+    logging.warning(f"pyautogen not installed. Install with: pip install pyautogen. Error: {e}")
 
 from core.tools import (
     discover_new_sources,
@@ -32,21 +37,34 @@ from core.tools import (
 
 logger = logging.getLogger(__name__)
 
-# Ollama configuration for all agents
-OLLAMA_CONFIG = {
-    "config_list": [
-        {
-            "model": "llama3.2:latest",
-            "base_url": "http://localhost:11434/v1",
-            "api_key": "ollama",  # Required but value doesn't matter for local Ollama
-        }
-    ],
-    "cache_seed": None,  # Disable caching for development
-    "temperature": 0.7,
-}
+
+def create_ollama_client() -> "OpenAIChatCompletionClient":
+    """
+    Create an OpenAI-compatible client for Ollama.
+    
+    Returns:
+        OpenAIChatCompletionClient configured to use local Ollama server.
+    """
+    if OpenAIChatCompletionClient is None:
+        raise ImportError("autogen-ext[openai] is required. Install with: pip install 'autogen-ext[openai]'")
+    
+    # Create model capabilities for Ollama
+    capabilities = ModelCapabilities(
+        function_calling=True,
+        json_output=True,
+        vision=False,
+    )
+    
+    return OpenAIChatCompletionClient(
+        model="llama3.2:1b",
+        base_url="http://localhost:11434/v1",
+        api_key="ollama",  # Required but value doesn't matter for local Ollama
+        temperature=0.7,
+        model_capabilities=capabilities,
+    )
 
 
-def create_content_discovery_agent() -> "autogen.AssistantAgent":
+def create_content_discovery_agent() -> "AssistantAgent":
     """
     Create the Content Discovery Agent.
     
@@ -58,8 +76,8 @@ def create_content_discovery_agent() -> "autogen.AssistantAgent":
     Returns:
         An AutoGen AssistantAgent configured for content discovery.
     """
-    if autogen is None:
-        raise ImportError("pyautogen is required. Install with: pip install pyautogen")
+    if not autogen_available:
+        raise ImportError("pyautogen is required. Install with: pip install pyautogen 'autogen-ext[openai]'")
     
     system_message = """You are a Content Discovery Expert for SmartCache AI.
 
@@ -98,17 +116,28 @@ Communication style:
 When users ask about content, ALWAYS use the tools to fetch current data.
 Do NOT make up source names or URLs."""
     
-    agent = autogen.AssistantAgent(
+    model_client = create_ollama_client()
+    
+    # Tools for discovery agent
+    tools = [
+        discover_new_sources,
+        get_user_subscriptions_info,
+        recommend_content_for_download,
+        get_content_item_details,
+    ]
+    
+    agent = AssistantAgent(
         name="ContentDiscoveryAgent",
-        llm_config=OLLAMA_CONFIG,
+        model_client=model_client,
+        tools=tools,
         system_message=system_message,
     )
     
-    logger.info("Created ContentDiscoveryAgent")
+    logger.info("Created ContentDiscoveryAgent with new API")
     return agent
 
 
-def create_content_download_agent() -> "autogen.AssistantAgent":
+def create_content_download_agent() -> "AssistantAgent":
     """
     Create the Content Download Agent.
     
@@ -120,8 +149,8 @@ def create_content_download_agent() -> "autogen.AssistantAgent":
     Returns:
         An AutoGen AssistantAgent configured for download management.
     """
-    if autogen is None:
-        raise ImportError("pyautogen is required. Install with: pip install pyautogen")
+    if not autogen_available:
+        raise ImportError("pyautogen is required. Install with: pip install pyautogen 'autogen-ext[openai]'")
     
     system_message = """You are a Download Manager for SmartCache AI.
 
@@ -160,17 +189,27 @@ Communication style:
 When managing downloads, ALWAYS use the tools to interact with the system.
 The queue_download tool now requires content_item_id (from Discovery Agent recommendations)."""
     
-    agent = autogen.AssistantAgent(
+    model_client = create_ollama_client()
+    
+    # Tools for download agent
+    tools = [
+        queue_download,
+        check_download_status,
+        process_download_queue,
+    ]
+    
+    agent = AssistantAgent(
         name="ContentDownloadAgent",
-        llm_config=OLLAMA_CONFIG,
+        model_client=model_client,
+        tools=tools,
         system_message=system_message,
     )
     
-    logger.info("Created ContentDownloadAgent")
+    logger.info("Created ContentDownloadAgent with new API")
     return agent
 
 
-def create_content_summarizer_agent() -> "autogen.AssistantAgent":
+def create_content_summarizer_agent() -> "AssistantAgent":
     """
     Create the Content Summarizer Agent (SKELETON).
     
@@ -185,8 +224,8 @@ def create_content_summarizer_agent() -> "autogen.AssistantAgent":
     Returns:
         An AutoGen AssistantAgent configured for content analysis.
     """
-    if autogen is None:
-        raise ImportError("pyautogen is required. Install with: pip install pyautogen")
+    if not autogen_available:
+        raise ImportError("pyautogen is required. Install with: pip install pyautogen 'autogen-ext[openai]'")
     
     system_message = """You are a Content Quality Analyst for SmartCache AI.
 
@@ -215,123 +254,46 @@ Communication style:
 When asked to analyze content, call the stub tools to demonstrate
 the planned functionality."""
     
-    agent = autogen.AssistantAgent(
+    model_client = create_ollama_client()
+    
+    # Tools for summarizer agent (stubs)
+    tools = [
+        summarize_content,
+        assess_quality,
+    ]
+    
+    agent = AssistantAgent(
         name="ContentSummarizerAgent",
-        llm_config=OLLAMA_CONFIG,
+        model_client=model_client,
+        tools=tools,
         system_message=system_message,
     )
     
-    logger.info("Created ContentSummarizerAgent (skeleton)")
+    logger.info("Created ContentSummarizerAgent (skeleton) with new API")
     return agent
 
 
-def create_user_proxy() -> "autogen.UserProxyAgent":
+def create_user_proxy() -> "UserProxyAgent":
     """
     Create the User Proxy Agent.
     
-    This agent executes the tools/functions on behalf of the user.
-    It's configured to run automatically without human input.
+    In the new AutoGen API, the UserProxyAgent is simpler and doesn't require
+    tool registration. Tools are passed directly to AssistantAgent instances.
     
     Returns:
-        An AutoGen UserProxyAgent configured with all available tools.
+        An AutoGen UserProxyAgent configured for user interaction.
     """
-    if autogen is None:
-        raise ImportError("pyautogen is required. Install with: pip install pyautogen")
+    if not autogen_available:
+        raise ImportError("pyautogen is required. Install with: pip install pyautogen 'autogen-ext[openai]'")
     
-    user_proxy = autogen.UserProxyAgent(
+    # In the new API, UserProxyAgent is much simpler
+    # It mainly handles human interaction
+    user_proxy = UserProxyAgent(
         name="UserProxy",
-        human_input_mode="NEVER",  # Fully automated
-        max_consecutive_auto_reply=10,
-        is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
-        code_execution_config=False,  # We use registered functions, not code execution
+        description="A proxy agent for the user",
     )
     
-    # Register all tools with the user proxy
-    # Discovery tools
-    autogen.register_function(
-        discover_new_sources,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="discover_new_sources",
-        description="Discover available content sources by type (podcast/article)",
-    )
-    
-    autogen.register_function(
-        filter_by_preferences,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="filter_by_preferences",
-        description="Filter content sources based on user preferences",
-    )
-    
-    autogen.register_function(
-        get_user_subscriptions_info,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="get_user_subscriptions_info",
-        description="Get user's current subscriptions",
-    )
-    
-    # Recommendation tools
-    autogen.register_function(
-        recommend_content_for_download,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="recommend_content_for_download",
-        description="Recommend content items for download based on user preferences (returns Content IDs)",
-    )
-    
-    autogen.register_function(
-        get_content_item_details,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="get_content_item_details",
-        description="Get detailed information about a specific content item by Content ID",
-    )
-    
-    # Download tools
-    autogen.register_function(
-        queue_download,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="queue_download",
-        description="Queue a content item for download using Content ID from recommendations",
-    )
-    
-    autogen.register_function(
-        check_download_status,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="check_download_status",
-        description="Check status of a download item by Download Item ID",
-    )
-    
-    autogen.register_function(
-        process_download_queue,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="process_download_queue",
-        description="Process all queued downloads for a user",
-    )
-    
-    # LLM tools (stubs)
-    autogen.register_function(
-        summarize_content,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="summarize_content",
-        description="Summarize content text (stub for Sprint 1)",
-    )
-    
-    autogen.register_function(
-        assess_quality,
-        caller=user_proxy,
-        executor=user_proxy,
-        name="assess_quality",
-        description="Assess content quality (stub for Sprint 1)",
-    )
-    
-    logger.info("Created UserProxy with 10 registered tools")
+    logger.info("Created UserProxy with new API (tools are registered with AssistantAgents)")
     return user_proxy
 
 
