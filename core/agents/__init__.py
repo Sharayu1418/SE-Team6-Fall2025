@@ -15,8 +15,13 @@ from .definitions import (
     create_ollama_client,
 )
 
-# TODO: Update groupchat.py for new AutoGen API (autogen-agentchat 0.7.5)
-# from .groupchat import create_groupchat, create_manager
+# New Teams API (replaces old GroupChat)
+from .groupchat import (
+    create_round_robin_team,
+    create_selector_team,
+    create_content_pipeline,
+    create_groupchat,  # Deprecated alias for backward compatibility
+)
 
 __all__ = [
     # Agent factory functions
@@ -26,9 +31,11 @@ __all__ = [
     "create_user_proxy",
     # Configuration
     "create_ollama_client",
-    # GroupChat setup (TODO: Update for new API)
-    # "create_groupchat",
-    # "create_manager",
+    # Team setup (new API)
+    "create_round_robin_team",
+    "create_selector_team",
+    "create_content_pipeline",
+    "create_groupchat",  # Deprecated
 ]
 
 

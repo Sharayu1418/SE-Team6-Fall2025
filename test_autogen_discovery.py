@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-AutoGen Discovery Agent Test - Tests the lightweight llama3.2:1b model
+AutoGen Discovery Agent Test - Tests the llama3.2:3b model
 
 This demonstrates the AutoGen agents working together to discover and
 recommend content using the new lightweight model.
@@ -28,7 +28,7 @@ from core.agents.definitions import (
 )
 
 print("="*70)
-print("🤖 AUTOGEN DISCOVERY AGENT TEST - llama3.2:1b")
+print("🤖 AUTOGEN DISCOVERY AGENT TEST - llama3.2:3b")
 print("="*70)
 print()
 
@@ -54,7 +54,7 @@ print("="*70)
 print()
 
 print("🔄 Starting AutoGen conversation with Discovery Agent...")
-print("   (Using llama3.2:1b - lightweight model)")
+print("   (Using llama3.2:3b - improved model with better reasoning)")
 print("-"*70)
 print()
 
@@ -80,7 +80,7 @@ async def run_test():
         print("="*70)
         print()
         print("🎯 Key Points:")
-        print("  1. ✓ Discovery Agent responded using llama3.2:1b")
+        print("  1. ✓ Discovery Agent responded using llama3.2:3b")
         print("  2. ✓ Lightweight model is working (1.3GB RAM usage)")
         print("  3. ✓ Agent used tools to fetch real recommendations")
         print("  4. ✓ Content IDs provided for download queue")
