@@ -77,14 +77,23 @@ def recommend_content_for_download(
         # Get source IDs
         source_ids = [sub.source_id for sub in subscriptions]
         
-        # Fetch ALL ContentItem records from subscribed sources
-        # No time filter - return all available content as requested
+        # Fetch ContentItem records from subscribed sources that have storage_url
+        # IMPORTANT: Only recommend items that are cached in S3/Supabase
+        # This prevents downloading from original URLs that may be blocked (403)
         available_items = ContentItem.objects.filter(
             source_id__in=source_ids,
+            storage_url__isnull=False,  # MUST have storage URL
+        ).exclude(
+            storage_url=''  # Exclude empty strings
         ).select_related('source').order_by('-published_at')[:100]  # Limit to 100 most recent
         
         if not available_items:
-            return "No content available from your subscribed sources yet. Check back later!"
+            return (
+                "No cached content available from your subscribed sources yet.\n\n"
+                "Content needs to be successfully downloaded and stored in S3/Supabase "
+                "during the ETL pipeline before it can be recommended for download.\n\n"
+                "Tip: Check the ETL logs for download errors (403 Forbidden, etc.)"
+            )
         
         # Filter by user topics (simple keyword matching)
         recommended = []

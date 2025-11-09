@@ -114,6 +114,14 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+# Media files (user-uploaded and downloaded content)
+MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL = '/media/'
+
+# Download settings
+DOWNLOAD_DIR = MEDIA_ROOT / 'downloads'
+MAX_DOWNLOAD_SIZE_MB = 500  # Maximum file size for downloads
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

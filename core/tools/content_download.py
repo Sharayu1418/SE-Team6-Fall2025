@@ -52,10 +52,25 @@ def queue_download(
         except ContentItem.DoesNotExist:
             return f"Error: Content item #{content_item_id} not found. Please check the Content ID."
         
+        # Validate that content is cached in storage
+        if not content_item.storage_url:
+            return (
+                f"❌ Cannot queue download for '{content_item.title}'\n\n"
+                f"This content is not cached in storage (S3/Supabase).\n"
+                f"The ETL pipeline likely failed to download this content from the original source.\n\n"
+                f"Original URL: {content_item.media_url or content_item.url}\n\n"
+                f"💡 Only content that has been successfully cached can be downloaded.\n"
+                f"Please check the ETL logs for why this content failed to cache."
+            )
+        
         # Check if already queued or downloaded for this user
+        # Match by source + title to avoid false duplicates
         existing = DownloadItem.objects.filter(
             user_id=user_id,
-            original_url=content_item.url,
+            source=content_item.source,
+            title=content_item.title,
+        ).exclude(
+            status='failed'  # Allow retrying failed downloads
         ).first()
         
         if existing:
@@ -64,7 +79,8 @@ def queue_download(
                 f"Title: {existing.title}\n"
                 f"Status: {existing.status}\n"
                 f"Download Item ID: {existing.id}\n"
-                f"Media URL: {existing.media_url or 'Not available'}"
+                f"Media URL: {existing.media_url or 'Not available'}\n\n"
+                f"💡 To retry failed downloads, you can re-queue them after the status is 'failed'."
             )
         
         # Create DownloadItem
@@ -179,8 +195,8 @@ def process_download_queue(user_id: int) -> str:
     Process all queued downloads for a user.
     
     This tool retrieves all queued download items for a user and
-    initiates the download process. Currently a stub that will be
-    implemented with actual download logic in Sprint 2.
+    initiates background download tasks using Celery. Files will be
+    downloaded from S3/Supabase to local storage.
     
     Args:
         user_id: The user's ID.
@@ -192,18 +208,24 @@ def process_download_queue(user_id: int) -> str:
         >>> process_download_queue(1)
         "Processing download queue for user 1...
         Found 3 queued items:
-        - Tech News Episode 42
-        - TED Talk: Future of AI
-        - Article: Python Best Practices
+        - Tech News Episode 42 (Download Item ID: 5)
+        - TED Talk: Future of AI (Download Item ID: 6)
+        - Article: Python Best Practices (Download Item ID: 7)
         
-        [STUB] Download processing not yet implemented.
-        Items remain in 'queued' status."
+        ✓ Started 3 background download task(s)
+        
+        Files will be downloaded to /media/downloads/user_1/
+        Check status with check_download_status(download_item_id)"
     """
     try:
-        mcp = DjangoMCPService()
+        from core.models import DownloadItem
+        from core.tasks import download_content_file
         
         # Get all queued items
-        queued_items = mcp.get_download_items(user_id=user_id, status='queued')
+        queued_items = DownloadItem.objects.filter(
+            user_id=user_id,
+            status='queued'
+        ).select_related('source')
         
         if not queued_items:
             return f"No queued downloads found for user {user_id}."
@@ -213,19 +235,23 @@ def process_download_queue(user_id: int) -> str:
             f"Found {len(queued_items)} queued item(s):\n\n"
         )
         
+        # Trigger Celery tasks for each queued item
+        task_ids = []
         for item in queued_items:
-            result += f"- {item.title} (ID: {item.id})\n"
+            result += f"- {item.title} (Download Item ID: {item.id})\n"
+            task = download_content_file.delay(item.id)
+            task_ids.append(task.id)
+            logger.info(f"Triggered download task {task.id} for DownloadItem {item.id}")
         
-        # TODO: Implement actual download logic in Sprint 2
         result += (
-            f"\n[STUB] Download processing not yet implemented.\n"
-            f"In Sprint 2, this will:\n"
-            f"1. Fetch content from original URLs\n"
-            f"2. Store/cache content appropriately\n"
-            f"3. Update download status to 'ready'\n"
-            f"4. Set media_url for cached content\n\n"
-            f"For now, items remain in 'queued' status."
+            f"\n✓ Started {len(task_ids)} background download task(s)\n\n"
+            f"Files will be downloaded to /media/downloads/user_{user_id}/\n"
+            f"Check status with check_download_status(download_item_id)\n\n"
+            f"Task IDs: {', '.join(task_ids[:3])}"
         )
+        
+        if len(task_ids) > 3:
+            result += f"... and {len(task_ids) - 3} more"
         
         return result
     
