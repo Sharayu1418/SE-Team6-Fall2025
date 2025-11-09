@@ -165,8 +165,12 @@ You have access to these tools:
 Your workflow:
 1. Listen for recommendations from the Discovery Agent
 2. When you receive Content IDs (e.g., [123, 124, 125]), call queue_download for each one
-3. After queuing all items, call process_download_queue(user_id) to start downloads
+3. **CRITICAL**: After queuing ALL items, you MUST call process_download_queue(user_id) to start downloads
 4. Report back with Download Item IDs and confirm download tasks started
+
+**IMPORTANT**: Always call process_download_queue(user_id) after queuing items. 
+This triggers the background Celery tasks that actually download the files.
+Without this step, items will remain in 'queued' status and won't download.
 
 Example:
 Discovery Agent says: "Download Agent, queue these Content IDs: [123, 124, 125]"
