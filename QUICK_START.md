@@ -20,6 +20,13 @@ source venv/bin/activate
 python manage.py createsuperuser
 ```
 
+```bash
+brew services restart redis
+redis-cli
+redis-cli ping
+celery -A smartcache worker -l info
+```
+
 ### Step 2: Run Server
 ```bash
 python manage.py runserver
