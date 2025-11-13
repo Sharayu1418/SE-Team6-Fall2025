@@ -119,11 +119,5 @@ SE-Team6-Fall2025/
 
 ---
 
-## ⚠️ Notes
 
-- Never commit your `.env` file to the repository.  
-- Ensure your AWS credentials have the necessary S3 permissions.  
-- Logs and temporary files are stored in the container and can be monitored via Docker.
-
----
 
