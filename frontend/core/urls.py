@@ -9,10 +9,15 @@ urlpatterns = [
     path('commutes/', views.commutes, name='commutes'),
     path('sources/', views.sources, name='sources'),
     path('downloads/', views.downloads, name='downloads'),
+    path('discover/', views.discover, name='discover'),
     
     # HTMX endpoints
     path('api/toggle-subscription/<int:source_id>/', 
          views.toggle_subscription, name='toggle_subscription'),
+    path('api/request-download/', 
+         views.request_download, name='request_download'),
+    path('api/discover/', 
+         views.discover_content_api, name='discover_content_api'),
     
     # Auth views
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),

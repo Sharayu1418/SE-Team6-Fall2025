@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-Setup Instructions
-Instructions will be added once the project framework and tech stack are finalized.  
-
-Deliverables
-- Project Proposal (submitted as PDF on Brightspace)  
-- Main Project (code + documentation)  
-- Supplementary Files (media, presentations, reports, etc.)  
-
-📌 Notes
-- This repo is **private** and accessible to team members and the TA.  
-- The README will be updated as the project progresses.  
-=======
 # SmartCache AI - Sprint 1 Web Pilot
 
 Intelligent Offline Content Curator with initial focus on subway riders.
@@ -164,4 +151,3 @@ smartcache/
 ## Support
 
 For development questions or issues, check the Django admin interface and logs for debugging information.
->>>>>>> a153896 (Initial project commit: Django + SmartCache setup)

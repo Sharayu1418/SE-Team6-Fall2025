@@ -29,3 +29,23 @@ class DownloadAPIView(APIView):
             return Response(response_serializer.data, status=status.HTTP_202_ACCEPTED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request, task_id=None):
+        """
+        Get download task status by ID.
+        URL: /api/download/<task_id>/
+        """
+        try:
+            content_instance = DownloadedContent.objects.get(id=task_id)
+            response_serializer = DownloadedContentSerializer(content_instance)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+        except DownloadedContent.DoesNotExist:
+            return Response(
+                {'error': 'Task not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'Invalid task ID format'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

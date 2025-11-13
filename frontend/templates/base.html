@@ -42,6 +42,9 @@
                         <a class="nav-link" href="{% url 'core:sources' %}">Sources</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:discover' %}">Discover</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'core:downloads' %}">Downloads</a>
                     </li>
                     {% endif %}
@@ -93,6 +96,12 @@
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script>
+        // Configure HTMX to include CSRF token in all requests
+        document.body.addEventListener('htmx:configRequest', function(event) {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+    </script>
     
     <!-- PWA Service Worker Registration -->
     <script>

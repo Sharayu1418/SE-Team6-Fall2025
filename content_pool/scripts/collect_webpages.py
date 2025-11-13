@@ -11,7 +11,7 @@ NEWS_SEARCH_URLS = [
     "https://www.bbc.com/search?q={query}",
     "https://www.nytimes.com/search?query={query}"
 ]
-OUTPUT_FILE = "data/webpages.json"
+OUTPUT_FILE = "data/webpages_by_tag_rich.json"
 MAX_ARTICLES_PER_TAG = 5
 
 # --- FUNCTION TO FETCH WIKIPEDIA SUMMARY ---

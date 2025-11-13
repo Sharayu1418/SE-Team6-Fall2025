@@ -38,6 +38,7 @@
                         hx-post="{% url 'core:toggle_subscription' source.id %}"
                         hx-target="#subscription-{{ source.id }}"
                         hx-swap="outerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                         id="subscription-{{ source.id }}">
                         ✓ Subscribed
                     </button>
@@ -47,6 +48,7 @@
                         hx-post="{% url 'core:toggle_subscription' source.id %}"
                         hx-target="#subscription-{{ source.id }}"
                         hx-swap="outerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                         id="subscription-{{ source.id }}">
                         Subscribe
                     </button>

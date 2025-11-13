@@ -10,11 +10,20 @@ import os
 
 def _download_with_yt_dlp(content_instance, audio_only=False):
     """Handles downloading from media platforms like YouTube."""
-    output_template = os.path.join(settings.MEDIA_ROOT, 'temp', '%(id)s.%(ext)s')
+    # Ensure temp directory exists
+    temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+    output_template = os.path.join(temp_dir, '%(id)s.%(ext)s')
     
     ydl_opts = {
         'outtmpl': output_template,
         'quiet': True,
+        # Windows can hold onto .part files (antivirus, indexing, etc.) causing
+        # rename failures.  Disable part-files and allow overwrites so yt-dlp
+        # writes directly to the final filename.
+        'nopart': True,
+        'overwrites': True,
+        'windowsfilenames': True,
     }
 
     if audio_only:
@@ -73,6 +82,38 @@ def _download_generic_file(content_instance):
     except requests.exceptions.RequestException as e:
         raise ConnectionError(f"Network error during download: {e}")
 
+
+def _download_direct_media(content_instance, expected_kind='audio'):
+    """Download media files directly without requiring FFmpeg."""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    try:
+        with requests.get(content_instance.source_url, stream=True, headers=headers, timeout=60) as response:
+            response.raise_for_status()
+
+            content_type = response.headers.get('Content-Type', '').lower()
+            if expected_kind == 'audio' and 'audio' not in content_type:
+                raise ValueError(f"Expected audio content but received '{content_type}'")
+
+            parsed_url = urlparse(content_instance.source_url)
+            file_name = os.path.basename(parsed_url.path) or 'downloaded_media'
+
+            content_instance.content_file.save(file_name, ContentFile(response.content))
+            content_instance.title = file_name
+            content_instance.content_type = content_type or 'application/octet-stream'
+            content_instance.metadata = {
+                "headers": dict(response.headers),
+                "downloaded_via": "direct"
+            }
+
+    except requests.exceptions.Timeout:
+        raise ConnectionError("Media download timed out.")
+    except requests.exceptions.RequestException as e:
+        raise ConnectionError(f"Network error during media download: {e}")
+
+
 def download_media(content_id):
     """
     Dispatcher function that calls the appropriate download handler.
@@ -91,7 +132,11 @@ def download_media(content_id):
         if content_instance.requested_type == DownloadedContent.DownloadType.VIDEO:
             _download_with_yt_dlp(content_instance, audio_only=False)
         elif content_instance.requested_type == DownloadedContent.DownloadType.AUDIO:
-            _download_with_yt_dlp(content_instance, audio_only=True)
+            url_lower = content_instance.source_url.lower()
+            if any(host in url_lower for host in ['youtube.com', 'youtu.be', 'soundcloud.com', 'spotify.com']):
+                _download_with_yt_dlp(content_instance, audio_only=True)
+            else:
+                _download_direct_media(content_instance, expected_kind='audio')
         elif content_instance.requested_type == DownloadedContent.DownloadType.TEXT:
             _download_generic_file(content_instance)
 

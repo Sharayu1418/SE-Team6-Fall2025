@@ -20,8 +20,8 @@ pip install -r requirements.txt
 python scripts/collect_youtube.py
 
 # Collect podcasts from RSS feeds
-python scripts/collect_podcasts_rss.py
+python scripts/collect_podcasts.py
 
 # Collect webpages (Wikipedia + news)
-python scripts/collect_webpages_by_tag_rich.py
+python scripts/collect_webpages.py
 

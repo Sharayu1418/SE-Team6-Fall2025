@@ -86,17 +86,28 @@ class DownloadItem(models.Model):
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    source = models.ForeignKey(ContentSource, on_delete=models.CASCADE)
-    title = models.CharField(max_length=300)
+    source = models.ForeignKey(ContentSource, on_delete=models.CASCADE, null=True, blank=True,
+                                help_text="Optional: ContentSource for automated items, null for manual URL entries")
+    title = models.CharField(max_length=300, blank=True, null=True, 
+                            help_text="Fetched from downloader service")
     original_url = models.URLField()
-    media_url = models.URLField(null=True, blank=True)
+    media_url = models.URLField(null=True, blank=True, 
+                               help_text="S3 URL from downloader service")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='queued')
-    available_from = models.DateTimeField()
+    available_from = models.DateTimeField(default=timezone.now,
+                                          help_text="When content becomes available")
+    downloader_task_id = models.UUIDField(null=True, blank=True, 
+                                         help_text="UUID from downloader service")
+    download_type = models.CharField(max_length=20, default='VIDEO',
+                                    choices=[('VIDEO', 'Video'), ('AUDIO', 'Audio'), ('TEXT', 'Text')],
+                                    help_text="Type requested from downloader service")
+    metadata = models.JSONField(default=dict, blank=True,
+                               help_text="Additional metadata from downloader service")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"{self.title} [{self.get_status_display()}]"
+        return f"{self.title or self.original_url} [{self.get_status_display()}]"
 
 class EventLog(models.Model):
     EVENT_TYPE_CHOICES = [
