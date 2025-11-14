@@ -1,0 +1,15 @@
+# Environment files
+.env
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local database and media files
+db.sqlite3
+media/
+
+# Git and IDE folders
+.git
+.vscode
