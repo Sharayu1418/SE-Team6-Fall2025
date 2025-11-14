@@ -11,5 +11,11 @@ router.register(r'downloads', views.DownloadItemViewSet, basename='downloads')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('auth/', include('rest_framework.urls')),
+    # Auth endpoints
+    path('auth/register/', views.register_user, name='register'),
+    path('auth/login/', views.login_user, name='login'),
+    path('auth/logout/', views.logout_user, name='logout'),
+    path('auth/me/', views.current_user, name='current_user'),
+    # Download file endpoint
+    path('downloads/<int:download_id>/file/', views.download_file, name='download_file'),
 ]

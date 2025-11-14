@@ -75,11 +75,12 @@ python manage.py runserver
 
 ### Tech Stack
 
-- **Backend**: Django 5.1, Django REST Framework
+- **Backend**: Django 5.1, Django REST Framework, Django Channels
 - **Task Queue**: Celery + Redis
 - **Database**: PostgreSQL (SQLite fallback for local dev)
-- **Frontend**: Bootstrap 5 + HTMX
-- **Deployment**: Docker + Gunicorn + Whitenoise
+- **Frontend**: React 18 + Vite, Tailwind CSS (Modern SPA with WebSocket support)
+- **AI Agents**: AutoGen multi-agent system with Ollama LLM
+- **Deployment**: Docker + Gunicorn + Daphne + Whitenoise
 
 ---
 
@@ -139,21 +140,30 @@ SE-Team6-Fall2025/
 
 ## 🌐 Key URLs
 
+### Backend (Django)
 | URL | Description |
 |-----|-------------|
-| http://localhost:8000 | Homepage/Dashboard |
+| http://localhost:8000 | Django backend API |
 | http://localhost:8000/admin | Admin panel (superuser required) |
 | http://localhost:8000/api/ | REST API root |
-| http://localhost:8000/commutes/ | Commute window management |
-| http://localhost:8000/sources/ | Content sources & subscriptions |
-| http://localhost:8000/downloads/ | Prepared downloads |
+| ws://localhost:8000/ws/agents/ | WebSocket for agent execution |
+
+### Frontend (React)
+| URL | Description |
+|-----|-------------|
+| http://localhost:5173 | React frontend (Vite dev server) |
+| http://localhost:5173/login | User login |
+| http://localhost:5173/register | User registration |
+| http://localhost:5173/downloads | Downloads management |
+| http://localhost:5173/preferences | User preferences |
 
 ---
 
 ## 🔧 Common Commands
 
+### Backend Commands
 ```bash
-# Development server
+# Development server (ASGI with Channels support)
 python manage.py runserver
 
 # Create admin user
@@ -172,11 +182,29 @@ python manage.py seed_defaults
 # Check for issues
 python manage.py check
 
-# Run Celery worker (optional)
+# Run Celery worker (required for downloads)
 celery -A smartcache worker --loglevel=info
 
 # Run Celery beat scheduler (optional)
 celery -A smartcache beat --loglevel=info
+```
+
+### Frontend Commands
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies (first time only)
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
 ---
@@ -206,11 +234,22 @@ Base URL: `/api/`
 
 | Endpoint | Methods | Description |
 |----------|---------|-------------|
+| `/api/auth/register/` | POST | Register new user with preferences |
+| `/api/auth/login/` | POST | Login user (session-based) |
+| `/api/auth/logout/` | POST | Logout user |
+| `/api/auth/me/` | GET | Get current authenticated user |
 | `/api/sources/` | GET, POST, PUT, DELETE | Content sources |
 | `/api/subscriptions/` | GET, POST, PUT, DELETE | User subscriptions |
 | `/api/commute/` | GET, POST, PUT, DELETE | Commute windows |
 | `/api/downloads/` | GET, POST, PUT, DELETE | Download items |
-| `/api/preferences/` | GET, POST | User preferences |
+| `/api/downloads/:id/file/` | GET | Download file for authenticated user |
+| `/api/preferences/` | GET, POST, PATCH | User preferences |
+
+### WebSocket Endpoints
+
+| Endpoint | Protocol | Description |
+|----------|----------|-------------|
+| `/ws/agents/` | WebSocket | Real-time agent execution updates |
 
 ---
 
@@ -323,6 +362,9 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 | **[QUICK_START.md](QUICK_START.md)** | Daily development reference | Already set up, need commands |
 | **[SETUP_GUIDE.md](SETUP_GUIDE.md)** | Comprehensive setup guide | First-time setup, learning Django |
 | **[PACKAGE_MANAGEMENT.md](PACKAGE_MANAGEMENT.md)** | Package installation guide | Installing new dependencies |
+| **[frontend/README.md](frontend/README.md)** | React frontend documentation | Frontend development, setup |
+| **[AUTOGEN_STATUS.md](AUTOGEN_STATUS.md)** | AutoGen agent system status | Understanding multi-agent workflow |
+| **[ETL_PIPELINE_GUIDE.md](ETL_PIPELINE_GUIDE.md)** | ETL pipeline documentation | Content ingestion workflow |
 
 ---
 
@@ -351,4 +393,55 @@ This is a team project for SE-Team6-Fall2025. The repository is private and acce
 
 ---
 
-*Last updated: October 19, 2025 | Sprint 1*
+---
+
+## 🎨 React Frontend
+
+SmartCache AI now includes a modern React single-page application with real-time agent execution capabilities!
+
+### Quick Start
+
+```bash
+# Terminal 1: Start Django backend
+python manage.py runserver
+
+# Terminal 2: Start Celery worker
+celery -A smartcache worker --loglevel=info
+
+# Terminal 3: Start Redis
+redis-server
+
+# Terminal 4: Start React frontend
+cd frontend
+npm install  # First time only
+npm run dev
+```
+
+Visit http://localhost:5173 to use the React frontend.
+
+### Features
+
+- **User Registration**: Sign up with personalized content preferences (topics, limits)
+- **Authentication**: Session-based login with Django backend
+- **Agent Execution**: Click a button to trigger RoundRobinGroupChat agents via WebSocket
+- **Real-time Updates**: Watch agent activity live as they discover and queue content
+- **Downloads Management**: View, filter, and download your content
+- **Preferences Editor**: Update your topics and limits anytime
+
+### How It Works
+
+1. **Register** at `/register` with your preferences (topics, daily limits, storage)
+2. **Dashboard** shows your stats and the "Discover & Download Content" button
+3. **Click the button** to connect via WebSocket and trigger the multi-agent system
+4. **Watch in real-time** as:
+   - Discovery Agent finds content based on your subscriptions
+   - Download Agent queues downloads (automatically processed via Django signals)
+   - Summarizer Agent provides quality assessment
+5. **View Downloads** page to see status and download ready files
+6. **Update Preferences** anytime to change your content discovery settings
+
+For detailed frontend documentation, see **[frontend/README.md](frontend/README.md)**.
+
+---
+
+*Last updated: November 10, 2025 | Sprint 2 - React Frontend + AutoGen Agents*
