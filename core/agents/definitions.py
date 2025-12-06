@@ -56,7 +56,7 @@ def create_ollama_client() -> "OpenAIChatCompletionClient":
     )
     
     return OpenAIChatCompletionClient(
-        model="llama3.2:3b",
+        model="llama3.1",
         base_url="http://localhost:11434/v1",
         api_key="ollama",  # Required but value doesn't matter for local Ollama
         temperature=0.7,

@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand';
-import api from '../api/client';
+import api, { initCsrf } from '../api/client';
 
 const useAuthStore = create((set, get) => ({
   // State
@@ -50,12 +50,8 @@ const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // First, make a GET request to get CSRF cookie (Django sets it automatically)
-      try {
-        await api.get('/sources/');
-      } catch (e) {
-        // Ignore errors, we just need the CSRF cookie
-      }
+      // Ensure CSRF cookie is set before login
+      await initCsrf();
       
       const response = await api.post('/auth/login/', {
         username,
@@ -85,12 +81,8 @@ const useAuthStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // First, make a GET request to get CSRF cookie (Django sets it automatically)
-      try {
-        await api.get('/sources/');
-      } catch (e) {
-        // Ignore errors, we just need the CSRF cookie
-      }
+      // Ensure CSRF cookie is set before registration
+      await initCsrf();
       
       const response = await api.post('/auth/register/', userData);
       

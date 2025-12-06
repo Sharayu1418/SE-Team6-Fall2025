@@ -5,23 +5,221 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}SmartCache AI{% endblock %}</title>
     
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="{% url 'manifest' %}">
-    <meta name="theme-color" content="#0d6efd">
+    <meta name="theme-color" content="#2563eb">
     
     <!-- Favicon placeholder -->
     <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,">
     
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --info: #06b6d4;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --gray-900: #111827;
+        }
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        body {
+            background-color: var(--gray-50);
+            color: var(--gray-900);
+        }
+        
+        /* Modern Navbar */
+        .navbar-modern {
+            background-color: #fff;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            padding: 0.75rem 0;
+        }
+        
+        .navbar-modern .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+        
+        .navbar-modern .nav-link {
+            color: var(--gray-700);
+            font-weight: 500;
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .navbar-modern .nav-link:hover {
+            color: var(--gray-900);
+            border-bottom-color: var(--gray-300);
+        }
+        
+        .navbar-modern .nav-link.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .navbar-modern .dropdown-toggle {
+            color: var(--gray-700);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        /* Cards */
+        .card-modern {
+            background: #fff;
+            border: none;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.2s;
+        }
+        
+        .card-modern:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 1rem;
+            padding: 2.5rem;
+            color: #fff;
+        }
+        
+        .hero-section h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .hero-section .lead {
+            font-size: 1.125rem;
+            opacity: 0.9;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+            font-weight: 500;
+            border-radius: 0.5rem;
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .btn-outline-success {
+            color: var(--success);
+            border-color: var(--success);
+            font-weight: 500;
+            border-radius: 0.5rem;
+        }
+        
+        .btn-outline-success:hover {
+            background-color: var(--success);
+            border-color: var(--success);
+        }
+        
+        .btn-outline-info {
+            color: var(--info);
+            border-color: var(--info);
+            font-weight: 500;
+            border-radius: 0.5rem;
+        }
+        
+        .btn-outline-info:hover {
+            background-color: var(--info);
+            border-color: var(--info);
+        }
+        
+        /* Stats */
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .stat-number.primary { color: var(--primary); }
+        .stat-number.success { color: var(--success); }
+        .stat-number.info { color: var(--info); }
+        
+        /* Footer */
+        .footer-modern {
+            background: #fff;
+            border-top: 1px solid var(--gray-200);
+            padding: 1.5rem 0;
+            margin-top: 3rem;
+        }
+        
+        .footer-modern p {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            margin: 0;
+        }
+        
+        /* Icon circles */
+        .icon-circle {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 1rem;
+        }
+        
+        .icon-circle.primary { background-color: rgba(37, 99, 235, 0.1); }
+        .icon-circle.success { background-color: rgba(16, 185, 129, 0.1); }
+        .icon-circle.info { background-color: rgba(6, 182, 212, 0.1); }
+        
+        /* Alerts */
+        .alert {
+            border-radius: 0.5rem;
+            border: none;
+        }
+    </style>
+    
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-light">
+<body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-modern">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{% url 'core:index' %}">
+            <a class="navbar-brand" href="{% url 'core:index' %}">
                 📱 SmartCache AI
             </a>
             
@@ -53,8 +251,8 @@
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             {{ user.username }}
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/admin/">Admin</a></li>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/admin/">Admin Panel</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'core:logout' %}">Logout</a></li>
                         </ul>
@@ -73,7 +271,7 @@
     <main class="container my-4">
         <!-- Messages -->
         {% if messages %}
-        <div class="row">
+        <div class="row mb-4">
             <div class="col-12">
                 {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -87,6 +285,13 @@
         
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Footer -->
+    <footer class="footer-modern">
+        <div class="container">
+            <p class="text-center">SmartCache AI - Intelligent Offline Content Curator</p>
+        </div>
+    </footer>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -36,6 +36,22 @@ const api = axios.create({
   }
 });
 
+// Ensure CSRF cookie is set on app load
+let csrfInitialized = false;
+export async function initCsrf() {
+  if (!csrfInitialized) {
+    try {
+      await api.get('/csrf/');
+      csrfInitialized = true;
+    } catch (e) {
+      console.warn('Failed to initialize CSRF:', e);
+    }
+  }
+}
+
+// Initialize CSRF on module load
+initCsrf();
+
 // Add CSRF token to all requests
 api.interceptors.request.use(
   (config) => {

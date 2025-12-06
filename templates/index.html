@@ -3,90 +3,87 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="row">
+<!-- Welcome Header -->
+<div class="row mb-4">
     <div class="col-12">
-        <!-- Hero Section -->
-        <div class="bg-primary text-white rounded-3 p-4 mb-4">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h1 class="display-5 fw-bold mb-2">{{ title }}</h1>
-                    <p class="lead mb-3">{{ focus }}</p>
-                    <p class="mb-0">Prepare personalized offline content for your daily commute, starting with subway riders who need reliable access to news, podcasts, and articles underground.</p>
-                </div>
-                <div class="col-lg-4 text-center">
-                    <div class="fs-1 mb-2">🚇</div>
-                    <small class="opacity-75">Smart content for smart commuters</small>
-                </div>
-            </div>
-        </div>
+        <h1 class="fw-bold mb-1" style="font-size: 1.75rem;">Welcome, {{ user.username|default:"Guest" }}!</h1>
+        <p class="text-muted mb-0">Your intelligent content curator is ready to find and download content for you.</p>
     </div>
 </div>
 
 {% if user.is_authenticated %}
 <!-- Dashboard Cards -->
-<div class="row g-4">
+<div class="row g-4 mb-5">
     <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body text-center">
-                <div class="fs-1 text-primary mb-3">⏰</div>
-                <h5 class="card-title">Commute Windows</h5>
-                <p class="card-text text-muted">Define when you need content ready for offline access</p>
-                <div class="fs-3 fw-bold text-primary mb-2">{{ commute_count }}</div>
+        <div class="card card-modern h-100">
+            <div class="card-body text-center py-4">
+                <div class="icon-circle primary">⏰</div>
+                <h5 class="card-title mb-2">Commute Windows</h5>
+                <p class="card-text text-muted small mb-3">Define when you need content ready for offline access</p>
+                <div class="stat-number primary mb-3">{{ commute_count }}</div>
                 <a href="{% url 'core:commutes' %}" class="btn btn-outline-primary">Manage Commutes</a>
             </div>
         </div>
     </div>
     
     <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body text-center">
-                <div class="fs-1 text-success mb-3">📡</div>
-                <h5 class="card-title">Content Sources</h5>
-                <p class="card-text text-muted">Subscribe to podcasts, news feeds, and articles</p>
-                <div class="fs-3 fw-bold text-success mb-2">{{ subscription_count }}</div>
+        <div class="card card-modern h-100">
+            <div class="card-body text-center py-4">
+                <div class="icon-circle success">📡</div>
+                <h5 class="card-title mb-2">Content Sources</h5>
+                <p class="card-text text-muted small mb-3">Subscribe to podcasts, news feeds, and articles</p>
+                <div class="stat-number success mb-3">{{ subscription_count }}</div>
                 <a href="{% url 'core:sources' %}" class="btn btn-outline-success">Browse Sources</a>
             </div>
         </div>
     </div>
     
     <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-body text-center">
-                <div class="fs-1 text-info mb-3">📱</div>
-                <h5 class="card-title">Ready Downloads</h5>
-                <p class="card-text text-muted">Content prepared and cached for offline viewing</p>
-                <div class="fs-3 fw-bold text-info mb-2">{{ download_count }}</div>
+        <div class="card card-modern h-100">
+            <div class="card-body text-center py-4">
+                <div class="icon-circle info">📱</div>
+                <h5 class="card-title mb-2">Ready Downloads</h5>
+                <p class="card-text text-muted small mb-3">Content prepared and cached for offline viewing</p>
+                <div class="stat-number info mb-3">{{ download_count }}</div>
                 <a href="{% url 'core:downloads' %}" class="btn btn-outline-info">View Downloads</a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Quick Stats -->
-<div class="row mt-5">
+<!-- How It Works Section -->
+<div class="row">
     <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">How SmartCache Works</h5>
+        <div class="card card-modern">
+            <div class="card-body py-4">
+                <h5 class="card-title text-center mb-4">How SmartCache Works</h5>
                 <div class="row text-center">
-                    <div class="col-md-3">
-                        <div class="fs-2 mb-2">1️⃣</div>
-                        <h6>Set Commute Times</h6>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                            <span class="text-primary fw-bold">1</span>
+                        </div>
+                        <h6 class="mb-1">Set Commute Times</h6>
                         <small class="text-muted">Tell us when you need content</small>
                     </div>
-                    <div class="col-md-3">
-                        <div class="fs-2 mb-2">2️⃣</div>
-                        <h6>Choose Sources</h6>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                            <span class="text-primary fw-bold">2</span>
+                        </div>
+                        <h6 class="mb-1">Choose Sources</h6>
                         <small class="text-muted">Select podcasts & articles</small>
                     </div>
-                    <div class="col-md-3">
-                        <div class="fs-2 mb-2">3️⃣</div>
-                        <h6>Auto Preparation</h6>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                            <span class="text-primary fw-bold">3</span>
+                        </div>
+                        <h6 class="mb-1">Auto Preparation</h6>
                         <small class="text-muted">Content ready before you leave</small>
                     </div>
                     <div class="col-md-3">
-                        <div class="fs-2 mb-2">4️⃣</div>
-                        <h6>Offline Access</h6>
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                            <span class="text-primary fw-bold">4</span>
+                        </div>
+                        <h6 class="mb-1">Offline Access</h6>
                         <small class="text-muted">Enjoy underground or anywhere</small>
                     </div>
                 </div>
@@ -94,15 +91,19 @@
         </div>
     </div>
 </div>
+
 {% else %}
 <!-- Not Authenticated -->
 <div class="row">
-    <div class="col-12 text-center">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body py-5">
-                <h3>Welcome to SmartCache AI</h3>
+    <div class="col-12">
+        <div class="card card-modern">
+            <div class="card-body text-center py-5">
+                <div class="mb-4">
+                    <span style="font-size: 4rem;">📱</span>
+                </div>
+                <h3 class="mb-2">Welcome to SmartCache AI</h3>
                 <p class="lead text-muted mb-4">Login to start curating your personalized offline content</p>
-                <a href="{% url 'core:login' %}" class="btn btn-primary btn-lg">Get Started</a>
+                <a href="{% url 'core:login' %}" class="btn btn-primary btn-lg px-5">Get Started</a>
             </div>
         </div>
     </div>

@@ -129,6 +129,8 @@ class ContentIngestionService:
         
         if source.type in ['podcast', 'article']:
             return self._ingest_rss_feed(source)
+        elif source.type == 'video':
+            return self._ingest_youtube_channel(source)
         else:
             raise ValueError(f"Unsupported source type: {source.type}")
     
@@ -181,6 +183,153 @@ class ContentIngestionService:
             
         except Exception as e:
             logger.error(f"Failed to parse feed {source.feed_url}: {e}")
+            raise
+    
+    def _ingest_youtube_channel(self, source: ContentSource) -> int:
+        """
+        Fetch videos from a YouTube channel/search query.
+        
+        The feed_url for YouTube sources should be either:
+        - A YouTube channel URL (e.g., https://www.youtube.com/@channel)
+        - A search query prefixed with 'search:' (e.g., 'search:AI technology')
+        
+        Args:
+            source: ContentSource with YouTube channel/search info
+            
+        Returns:
+            Number of new items created
+        """
+        try:
+            from youtubesearchpython import VideosSearch, ChannelsSearch, Playlist
+            
+            feed_url = str(source.feed_url)
+            videos = []
+            
+            # Determine if it's a search query or channel
+            if feed_url.startswith('search:'):
+                # Search query
+                query = feed_url.replace('search:', '').strip()
+                logger.info(f"Searching YouTube for: {query}")
+                search = VideosSearch(query, limit=20)
+                result = search.result()
+                if result and 'result' in result:
+                    videos = result['result']
+            else:
+                # Try to get channel videos via search
+                channel_name = feed_url.split('/')[-1].replace('@', '')
+                logger.info(f"Fetching videos from channel: {channel_name}")
+                search = VideosSearch(f"{channel_name}", limit=20)
+                result = search.result()
+                if result and 'result' in result:
+                    videos = result['result']
+            
+            if not videos:
+                logger.warning(f"No videos found for: {feed_url}")
+                return 0
+            
+            new_items = 0
+            
+            for video in videos:
+                try:
+                    # Extract video data
+                    video_id = video.get('id', '')
+                    title = video.get('title', 'Untitled')[:500]
+                    
+                    # Create GUID from video ID
+                    guid = f"youtube_{video_id}" if video_id else self._create_guid(video.get('link', ''))
+                    
+                    # Check if already exists
+                    if ContentItem.objects.filter(guid=guid).exists():
+                        logger.debug(f"Skipping duplicate: {title}")
+                        continue
+                    
+                    # Extract channel name
+                    channel_name = 'Unknown'
+                    if video.get('channel'):
+                        if isinstance(video['channel'], dict):
+                            channel_name = video['channel'].get('name', 'Unknown')
+                        else:
+                            channel_name = str(video['channel'])
+                    
+                    # Extract description
+                    description = ''
+                    if video.get('descriptionSnippet'):
+                        if isinstance(video['descriptionSnippet'], list) and len(video['descriptionSnippet']) > 0:
+                            if isinstance(video['descriptionSnippet'][0], dict):
+                                description = video['descriptionSnippet'][0].get('text', '')
+                        elif isinstance(video['descriptionSnippet'], str):
+                            description = video['descriptionSnippet']
+                    
+                    # Parse duration
+                    duration_seconds = None
+                    duration_str = video.get('duration', '')
+                    if duration_str:
+                        try:
+                            parts = duration_str.split(':')
+                            if len(parts) == 2:
+                                duration_seconds = int(parts[0]) * 60 + int(parts[1])
+                            elif len(parts) == 3:
+                                duration_seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                        except:
+                            pass
+                    
+                    # Create item data
+                    item_data = {
+                        'title': f"{title} - {channel_name}",
+                        'description': description[:2000],
+                        'url': video.get('link', ''),
+                        'guid': guid,
+                        'published_at': timezone.now(),  # YouTube search doesn't give exact dates
+                        'media_url': video.get('link', ''),  # YouTube video URL
+                        'duration_seconds': duration_seconds,
+                    }
+                    
+                    # Download YouTube video using yt-dlp
+                    temp_file_path = self._download_youtube_video(item_data['url'])
+                    
+                    storage_url = None
+                    storage_provider = 'none'
+                    
+                    if temp_file_path and self.storage_service:
+                        try:
+                            storage_url = self.storage_service.upload_file(temp_file_path, f"youtube/{guid}.mp4")
+                            storage_provider = self.storage_provider
+                            logger.info(f"✓ Uploaded to {storage_provider}: {storage_url}")
+                        except Exception as e:
+                            logger.warning(f"Failed to upload to storage: {e}")
+                        finally:
+                            # Clean up temp file
+                            if os.path.exists(temp_file_path):
+                                os.unlink(temp_file_path)
+                    
+                    # Create ContentItem
+                    content_item = ContentItem.objects.create(
+                        source=source,
+                        title=item_data['title'],
+                        description=item_data['description'],
+                        url=item_data['url'],
+                        media_url=item_data['media_url'],
+                        storage_url=storage_url or item_data['url'],
+                        storage_provider=storage_provider,
+                        duration_seconds=item_data.get('duration_seconds'),
+                        published_at=item_data['published_at'],
+                        guid=item_data['guid'],
+                    )
+                    
+                    new_items += 1
+                    logger.info(f"✓ Created: {content_item.title}")
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to process video: {e}")
+                    continue
+            
+            return new_items
+            
+        except ImportError:
+            logger.error("youtube-search-python not installed. Install with: pip install youtube-search-python")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to fetch YouTube videos: {e}")
             raise
     
     def _parse_feed_entry(self, entry: any, source: ContentSource) -> Dict[str, any]:
@@ -305,8 +454,18 @@ class ContentIngestionService:
         try:
             logger.info(f"Downloading media: {url}")
             
-            # Make request with streaming
-            response = requests.get(url, stream=True, timeout=timeout)
+            # Browser-like headers to avoid 403 Forbidden errors
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'audio/mpeg, audio/*, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Referer': 'https://www.google.com/',
+            }
+            
+            # Make request with streaming and browser headers
+            response = requests.get(url, stream=True, timeout=timeout, headers=headers)
             response.raise_for_status()
             
             # Determine file extension
@@ -330,6 +489,50 @@ class ContentIngestionService:
             return None
         except Exception as e:
             logger.error(f"Unexpected error downloading media: {e}")
+            return None
+    
+    def _download_youtube_video(self, url: str) -> Optional[str]:
+        """
+        Download a YouTube video using yt-dlp.
+        
+        Args:
+            url: YouTube video URL
+            
+        Returns:
+            Path to downloaded file, or None if download fails
+        """
+        try:
+            import yt_dlp
+            
+            # Create temp directory for download
+            temp_dir = tempfile.mkdtemp()
+            output_template = os.path.join(temp_dir, '%(id)s.%(ext)s')
+            
+            ydl_opts = {
+                'format': 'bestaudio/best',  # Audio only to save space, change to 'best' for video
+                'outtmpl': output_template,
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': False,
+            }
+            
+            logger.info(f"Downloading YouTube video: {url}")
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.extract_info(url, download=True)
+                # Find the downloaded file
+                for file in os.listdir(temp_dir):
+                    file_path = os.path.join(temp_dir, file)
+                    logger.info(f"✓ Downloaded YouTube video to: {file_path}")
+                    return file_path
+            
+            return None
+            
+        except ImportError:
+            logger.error("yt-dlp not installed. Install with: pip install yt-dlp")
+            return None
+        except Exception as e:
+            logger.error(f"Failed to download YouTube video: {e}")
             return None
     
     def _generate_object_key(self, source: ContentSource, item_data: Dict[str, any]) -> str:

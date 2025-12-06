@@ -2,17 +2,40 @@
 Django signals for automatic processing.
 
 This module provides signals that automatically trigger actions when
-certain model events occur (e.g., auto-processing download queues).
+certain model events occur (e.g., auto-processing download queues,
+auto-creating user preferences).
 """
 
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
+from django.contrib.auth.models import User
 
-from core.models import DownloadItem
+from core.models import DownloadItem, UserPreference
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=User)
+def create_user_preference(sender, instance, created, **kwargs):
+    """
+    Automatically create UserPreference when a new User is created.
+    Also handles existing users without preferences (e.g., superusers).
+    """
+    # Check if user already has preferences
+    if not hasattr(instance, 'userpreference'):
+        try:
+            UserPreference.objects.get(user=instance)
+        except UserPreference.DoesNotExist:
+            # Create default preferences for this user
+            UserPreference.objects.create(
+                user=instance,
+                topics=[],
+                max_daily_items=10,
+                max_storage_mb=500
+            )
+            logger.info(f"Created default preferences for user: {instance.username}")
 
 
 @receiver(post_save, sender=DownloadItem)

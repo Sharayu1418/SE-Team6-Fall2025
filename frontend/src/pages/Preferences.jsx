@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import api from '../api/client';
+import api, { initCsrf } from '../api/client';
 
 const AVAILABLE_TOPICS = [
   'technology',
@@ -43,8 +43,14 @@ export default function Preferences() {
       setError(null);
       const response = await api.get('/preferences/');
       
-      if (response.data && response.data.length > 0) {
-        const prefs = response.data[0];
+      // Handle both paginated ({results: [...]}) and non-paginated ([...]) responses
+      let prefsArray = response.data;
+      if (response.data && response.data.results) {
+        prefsArray = response.data.results;
+      }
+      
+      if (prefsArray && prefsArray.length > 0) {
+        const prefs = prefsArray[0];
         setPreferenceId(prefs.id);
         setFormData({
           topics: prefs.topics || [],
@@ -92,6 +98,9 @@ export default function Preferences() {
       setIsSaving(true);
       setError(null);
       setSuccess(false);
+
+      // Ensure CSRF cookie is set
+      await initCsrf();
 
       if (preferenceId) {
         // Update existing preferences

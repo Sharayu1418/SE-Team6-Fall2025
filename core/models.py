@@ -43,6 +43,7 @@ class ContentSource(models.Model):
     TYPE_CHOICES = [
         ('podcast', 'Podcast'),
         ('article', 'Article'),
+        ('video', 'Video'),
     ]
     
     POLICY_CHOICES = [

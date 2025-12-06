@@ -5,9 +5,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse, FileResponse, Http404
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db import transaction
 from asgiref.sync import sync_to_async
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -88,11 +89,15 @@ def toggle_subscription(request, source_id):
 class UserPreferenceViewSet(viewsets.ModelViewSet):
     serializer_class = UserPreferenceSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None  # Disable pagination - each user has only one preference
     
     def get_queryset(self):
         return UserPreference.objects.filter(user=self.request.user)
     
     def perform_create(self, serializer):
+        # Check if user already has preferences
+        if UserPreference.objects.filter(user=self.request.user).exists():
+            raise serializers.ValidationError("Preferences already exist. Use PATCH to update.")
         serializer.save(user=self.request.user)
 
 class CommuteWindowViewSet(viewsets.ModelViewSet):
@@ -137,6 +142,17 @@ class DownloadItemViewSet(viewsets.ModelViewSet):
 
 
 # New API Endpoints for React Frontend
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@ensure_csrf_cookie
+def get_csrf_token(request):
+    """
+    Endpoint to get CSRF cookie.
+    Frontend should call this on app load to ensure CSRF cookie is set.
+    """
+    return Response({'detail': 'CSRF cookie set'})
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -233,13 +249,17 @@ def register_user(request):
         )
 
 
-@api_view(['POST'])
+@api_view(['POST', 'GET'])
 @permission_classes([AllowAny])
+@ensure_csrf_cookie
 def login_user(request):
     """
     Login a user with username and password.
     
-    Expected payload:
+    GET: Returns CSRF cookie for the frontend.
+    POST: Performs login.
+    
+    Expected payload (POST):
     {
         "username": "string (required)",
         "password": "string (required)"
@@ -253,6 +273,9 @@ def login_user(request):
         "message": "Login successful"
     }
     """
+    # GET request just sets CSRF cookie
+    if request.method == 'GET':
+        return Response({'csrf': 'cookie set'})
     username = request.data.get('username')
     password = request.data.get('password')
     
@@ -301,9 +324,12 @@ def logout_user(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@ensure_csrf_cookie
 def current_user(request):
     """
     Get current authenticated user with preferences and stats.
+    
+    Also ensures the CSRF cookie is set for the frontend.
     
     Returns:
     {

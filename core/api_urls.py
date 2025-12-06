@@ -11,6 +11,8 @@ router.register(r'downloads', views.DownloadItemViewSet, basename='downloads')
 
 urlpatterns = [
     path('', include(router.urls)),
+    # CSRF token endpoint (call this first to get cookie)
+    path('csrf/', views.get_csrf_token, name='csrf'),
     # Auth endpoints
     path('auth/register/', views.register_user, name='register'),
     path('auth/login/', views.login_user, name='login'),

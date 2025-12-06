@@ -29,8 +29,12 @@ export default function Subscriptions() {
         api.get('/subscriptions/')
       ]);
       
-      setSources(sourcesRes.data);
-      setSubscriptions(subsRes.data);
+      // Handle both paginated ({results: [...]}) and non-paginated ([...]) responses
+      const sourcesData = sourcesRes.data?.results || sourcesRes.data || [];
+      const subsData = subsRes.data?.results || subsRes.data || [];
+      
+      setSources(Array.isArray(sourcesData) ? sourcesData : []);
+      setSubscriptions(Array.isArray(subsData) ? subsData : []);
     } catch (err) {
       setError('Failed to load content sources');
       console.error('Error fetching data:', err);
@@ -91,7 +95,7 @@ export default function Subscriptions() {
 
   const filteredSources = filterType === 'all' 
     ? sources 
-    : sources.filter(s => s.source_type === filterType);
+    : sources.filter(s => (s.source_type || s.type) === filterType);
 
   if (isLoading) {
     return (
@@ -200,13 +204,13 @@ export default function Subscriptions() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <span className="text-2xl">{getSourceIcon(source.source_type)}</span>
+                    <span className="text-2xl">{getSourceIcon(source.type || source.source_type)}</span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      source.source_type === 'podcast' 
+                      (source.type || source.source_type) === 'podcast' 
                         ? 'bg-purple-100 text-purple-800' 
                         : 'bg-green-100 text-green-800'
                     }`}>
-                      {source.source_type}
+                      {source.type || source.source_type}
                     </span>
                   </div>
                   {subscribed && (
@@ -228,7 +232,7 @@ export default function Subscriptions() {
 
                 <div className="mb-4 text-xs text-gray-500">
                   <p className="truncate">
-                    <span className="font-medium">URL:</span> {source.url}
+                    <span className="font-medium">Feed:</span> {source.feed_url || source.url}
                   </p>
                 </div>
 
