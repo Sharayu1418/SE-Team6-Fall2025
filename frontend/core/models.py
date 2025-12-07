@@ -43,9 +43,6 @@ class ContentSource(models.Model):
     TYPE_CHOICES = [
         ('podcast', 'Podcast'),
         ('article', 'Article'),
-        ('video', 'Video'),
-        ('meme', 'Meme'),
-        ('news', 'News'),  # NewsAPI articles
     ]
     
     POLICY_CHOICES = [
@@ -66,58 +63,6 @@ class ContentSource(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.get_type_display()})"
-
-class ContentItem(models.Model):
-    """
-    Individual content item discovered from a source.
-    This is what gets recommended and downloaded.
-    """
-    STORAGE_PROVIDER_CHOICES = [
-        ('aws_s3', 'AWS S3'),
-        ('supabase', 'Supabase Storage'),
-        ('none', 'No Storage'),
-    ]
-    
-    source = models.ForeignKey(ContentSource, on_delete=models.CASCADE)
-    title = models.CharField(max_length=500)
-    description = models.TextField(blank=True)
-    url = models.URLField()  # Original URL to the content
-    
-    # Media info
-    media_url = models.URLField(null=True, blank=True)  # Direct audio/video URL
-    duration_seconds = models.IntegerField(null=True, blank=True)
-    file_size_mb = models.FloatField(null=True, blank=True)
-    
-    # Storage info
-    storage_url = models.URLField(null=True, blank=True, help_text="URL to media in S3/Supabase storage")
-    storage_provider = models.CharField(
-        max_length=20,
-        choices=STORAGE_PROVIDER_CHOICES,
-        default='none',
-        help_text="Storage provider used for this content"
-    )
-    file_size_bytes = models.BigIntegerField(null=True, blank=True, help_text="Actual file size in bytes")
-    
-    # Metadata
-    published_at = models.DateTimeField()
-    discovered_at = models.DateTimeField(auto_now_add=True)
-    
-    # Quality/relevance scores (set by summarizer agent later)
-    quality_score = models.FloatField(null=True, blank=True)
-    topics = models.JSONField(default=list)  # Extracted topics
-    
-    # Prevent duplicates
-    guid = models.CharField(max_length=500, unique=True)  # RSS GUID or hash
-    
-    class Meta:
-        ordering = ['-published_at']
-        indexes = [
-            models.Index(fields=['source', '-published_at']),
-            models.Index(fields=['guid']),
-        ]
-    
-    def __str__(self):
-        return f"{self.title} ({self.source.name})"
 
 class Subscription(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -141,20 +86,28 @@ class DownloadItem(models.Model):
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    source = models.ForeignKey(ContentSource, on_delete=models.CASCADE)
-    title = models.CharField(max_length=300)
+    source = models.ForeignKey(ContentSource, on_delete=models.CASCADE, null=True, blank=True,
+                                help_text="Optional: ContentSource for automated items, null for manual URL entries")
+    title = models.CharField(max_length=300, blank=True, null=True, 
+                            help_text="Fetched from downloader service")
     original_url = models.URLField()
-    media_url = models.URLField(null=True, blank=True)
-    local_file_path = models.CharField(max_length=500, null=True, blank=True, help_text="Local path to downloaded file")
-    file_size_bytes = models.BigIntegerField(null=True, blank=True, help_text="Size of downloaded file in bytes")
-    error_message = models.TextField(null=True, blank=True, help_text="Error message if download failed")
+    media_url = models.URLField(null=True, blank=True, 
+                               help_text="S3 URL from downloader service")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='queued')
-    available_from = models.DateTimeField()
+    available_from = models.DateTimeField(default=timezone.now,
+                                          help_text="When content becomes available")
+    downloader_task_id = models.UUIDField(null=True, blank=True, 
+                                         help_text="UUID from downloader service")
+    download_type = models.CharField(max_length=20, default='VIDEO',
+                                    choices=[('VIDEO', 'Video'), ('AUDIO', 'Audio'), ('TEXT', 'Text')],
+                                    help_text="Type requested from downloader service")
+    metadata = models.JSONField(default=dict, blank=True,
+                               help_text="Additional metadata from downloader service")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
-        return f"{self.title} [{self.get_status_display()}]"
+        return f"{self.title or self.original_url} [{self.get_status_display()}]"
 
 class EventLog(models.Model):
     EVENT_TYPE_CHOICES = [
@@ -174,3 +127,18 @@ class EventLog(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.event_type} - {self.item.title}"
+from django.db import models
+
+class Category(models.Model):
+    key = models.CharField(max_length=100, unique=True)
+    display_name = models.CharField(max_length=150)
+
+    def __str__(self):
+        return self.display_name
+
+class Tag(models.Model):
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='tags')
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.category.display_name} - {self.name}"

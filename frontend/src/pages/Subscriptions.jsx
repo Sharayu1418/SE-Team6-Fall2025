@@ -90,7 +90,14 @@ export default function Subscriptions() {
   };
 
   const getSourceIcon = (type) => {
-    return type === 'podcast' ? '🎙️' : '📰';
+    const icons = {
+      podcast: '🎙️',
+      article: '📰',
+      video: '🎬',
+      meme: '😂',
+      news: '📰',
+    };
+    return icons[type] || '📄';
   };
 
   const filteredSources = filterType === 'all' 
@@ -112,7 +119,7 @@ export default function Subscriptions() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Content Sources</h1>
         <p className="mt-2 text-gray-600">
-          Subscribe to podcasts and article feeds to receive personalized content recommendations
+          Subscribe to podcasts, articles, videos, and memes to receive personalized content
         </p>
       </div>
 
@@ -123,20 +130,25 @@ export default function Subscriptions() {
       )}
 
       {/* Filter Buttons */}
-      <div className="mb-6 flex items-center space-x-4">
+      <div className="mb-6 flex items-center space-x-4 flex-wrap gap-2">
         <span className="text-sm font-medium text-gray-700">Filter by type:</span>
-        <div className="flex space-x-2">
-          {['all', 'podcast', 'article'].map((type) => (
+        <div className="flex space-x-2 flex-wrap gap-2">
+          {[
+            { key: 'all', label: 'All', icon: '🎯' },
+            { key: 'podcast', label: 'Podcast', icon: '🎙️' },
+            { key: 'meme', label: 'Meme', icon: '😂' },
+            { key: 'news', label: 'News', icon: '📰' },
+          ].map((filter) => (
             <button
-              key={type}
-              onClick={() => setFilterType(type)}
+              key={filter.key}
+              onClick={() => setFilterType(filter.key)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                filterType === type
+                filterType === filter.key
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
+              {filter.icon} {filter.label}
             </button>
           ))}
         </div>
@@ -206,9 +218,13 @@ export default function Subscriptions() {
                   <div className="flex items-center space-x-2">
                     <span className="text-2xl">{getSourceIcon(source.type || source.source_type)}</span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      (source.type || source.source_type) === 'podcast' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-green-100 text-green-800'
+                      {
+                        podcast: 'bg-purple-100 text-purple-800',
+                        article: 'bg-green-100 text-green-800',
+                        video: 'bg-red-100 text-red-800',
+                        meme: 'bg-yellow-100 text-yellow-800',
+                        news: 'bg-blue-100 text-blue-800',
+                      }[source.type || source.source_type] || 'bg-gray-100 text-gray-800'
                     }`}>
                       {source.type || source.source_type}
                     </span>

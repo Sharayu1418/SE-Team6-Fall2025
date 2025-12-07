@@ -131,6 +131,10 @@ class ContentIngestionService:
             return self._ingest_rss_feed(source)
         elif source.type == 'video':
             return self._ingest_youtube_channel(source)
+        elif source.type == 'meme':
+            return self._ingest_memes(source)
+        elif source.type == 'news':
+            return self._ingest_newsapi(source)
         else:
             raise ValueError(f"Unsupported source type: {source.type}")
     
@@ -222,6 +226,19 @@ class ContentIngestionService:
                 yt_url = f"ytsearch10:{feed_url}"
                 logger.info(f"Searching YouTube for channel: {feed_url}")
             
+            # Find cookies file for YouTube authentication
+            cookies_file = None
+            possible_paths = [
+                os.path.join(settings.BASE_DIR, 'cookies.txt'),
+                'cookies.txt',
+                os.path.expanduser('~/cookies.txt'),
+            ]
+            for path in possible_paths:
+                if os.path.exists(path):
+                    cookies_file = path
+                    logger.info(f"Using cookies file: {cookies_file}")
+                    break
+            
             # yt-dlp options for extracting metadata only (flat playlist)
             ydl_opts = {
                 'quiet': True,
@@ -229,6 +246,10 @@ class ContentIngestionService:
                 'extract_flat': 'in_playlist',  # Don't download, just get metadata
                 'playlistend': 10,  # Limit to 10 videos per source
             }
+            
+            # Add cookies if available
+            if cookies_file:
+                ydl_opts['cookiefile'] = cookies_file
             
             videos = []
             
@@ -530,6 +551,19 @@ class ContentIngestionService:
             temp_dir = tempfile.mkdtemp()
             output_template = os.path.join(temp_dir, '%(id)s.%(ext)s')
             
+            # Find cookies file - check multiple locations
+            cookies_file = None
+            possible_paths = [
+                os.path.join(settings.BASE_DIR, 'cookies.txt'),
+                'cookies.txt',
+                os.path.expanduser('~/cookies.txt'),
+            ]
+            for path in possible_paths:
+                if os.path.exists(path):
+                    cookies_file = path
+                    logger.info(f"Using cookies file: {cookies_file}")
+                    break
+            
             ydl_opts = {
                 'format': 'bestaudio/best',  # Audio only to save space, change to 'best' for video
                 'outtmpl': output_template,
@@ -537,6 +571,10 @@ class ContentIngestionService:
                 'no_warnings': True,
                 'extract_flat': False,
             }
+            
+            # Add cookies if available
+            if cookies_file:
+                ydl_opts['cookiefile'] = cookies_file
             
             logger.info(f"Downloading YouTube video: {url}")
             
@@ -641,4 +679,294 @@ class ContentIngestionService:
                 return ext
         
         return None
+    
+    def _ingest_memes(self, source: ContentSource) -> int:
+        """
+        Fetch memes from the Meme API (https://meme-api.com).
+        
+        The feed_url for meme sources should be the subreddit name:
+        - 'memes' for r/memes
+        - 'dankmemes' for r/dankmemes
+        - 'wholesomememes' for r/wholesomememes
+        
+        Args:
+            source: ContentSource with subreddit name in feed_url
+            
+        Returns:
+            Number of new items created
+        """
+        try:
+            subreddit = str(source.feed_url).strip('/')
+            
+            # Remove any URL prefix if present
+            if 'reddit.com' in subreddit:
+                subreddit = subreddit.split('/')[-1]
+            
+            # Fetch 20 memes from the API
+            api_url = f"https://meme-api.com/gimme/{subreddit}/20"
+            logger.info(f"Fetching memes from: {api_url}")
+            
+            response = requests.get(api_url, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if 'memes' not in data:
+                logger.warning(f"No memes found for subreddit: {subreddit}")
+                return 0
+            
+            memes = data['memes']
+            logger.info(f"Found {len(memes)} memes from r/{subreddit}")
+            
+            new_items = 0
+            
+            for meme in memes:
+                try:
+                    # Skip NSFW content
+                    if meme.get('nsfw', False):
+                        logger.debug(f"Skipping NSFW meme: {meme.get('title', 'Unknown')}")
+                        continue
+                    
+                    # Create GUID from post link
+                    post_link = meme.get('postLink', '')
+                    guid = f"meme_{hashlib.md5(post_link.encode()).hexdigest()}"
+                    
+                    # Check if already exists
+                    if ContentItem.objects.filter(guid=guid).exists():
+                        logger.debug(f"Skipping duplicate meme: {meme.get('title', 'Unknown')}")
+                        continue
+                    
+                    # Get image URL
+                    image_url = meme.get('url', '')
+                    if not image_url:
+                        continue
+                    
+                    # Get file extension from URL
+                    ext = self._get_extension_from_url(image_url) or '.jpg'
+                    
+                    # Download and upload to S3
+                    storage_url = None
+                    storage_provider = 'none'
+                    
+                    if self.storage_service:
+                        try:
+                            # Download the meme image
+                            temp_file_path = self._download_meme_image(image_url)
+                            
+                            if temp_file_path:
+                                # Upload to S3 under memes/{subreddit}/
+                                object_key = f"memes/{subreddit}/{guid}{ext}"
+                                storage_url = self.storage_service.upload_file(temp_file_path, object_key)
+                                storage_provider = self.storage_provider
+                                logger.info(f"✓ Uploaded meme to {storage_provider}: {object_key}")
+                                
+                                # Clean up temp file
+                                if os.path.exists(temp_file_path):
+                                    os.unlink(temp_file_path)
+                        except Exception as e:
+                            logger.warning(f"Failed to upload meme to storage: {e}")
+                    
+                    # Create ContentItem
+                    content_item = ContentItem.objects.create(
+                        source=source,
+                        title=meme.get('title', 'Untitled Meme')[:500],
+                        description=f"Posted by u/{meme.get('author', 'unknown')} on r/{subreddit} | {meme.get('ups', 0)} upvotes",
+                        url=post_link,
+                        media_url=image_url,
+                        storage_url=storage_url or image_url,
+                        storage_provider=storage_provider,
+                        published_at=timezone.now(),
+                        guid=guid,
+                    )
+                    
+                    new_items += 1
+                    logger.info(f"✓ Created meme: {content_item.title[:50]}...")
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to process meme: {e}")
+                    continue
+            
+            return new_items
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to fetch memes from API: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to ingest memes: {e}")
+            raise
+    
+    def _download_meme_image(self, url: str) -> Optional[str]:
+        """
+        Download a meme image to a temporary file.
+        
+        Args:
+            url: Image URL
+            
+        Returns:
+            Path to downloaded file, or None if download fails
+        """
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'image/*,*/*',
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30, stream=True)
+            response.raise_for_status()
+            
+            # Get extension from URL or content type
+            ext = self._get_extension_from_url(url) or '.jpg'
+            
+            # Create temp file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        temp_file.write(chunk)
+                
+                return temp_file.name
+            
+        except Exception as e:
+            logger.error(f"Failed to download meme image: {e}")
+            return None
+    
+    def _ingest_newsapi(self, source: ContentSource) -> int:
+        """
+        Fetch news articles from NewsAPI.
+        
+        The feed_url for news sources should be the search query or topic:
+        - 'technology' for tech news
+        - 'bitcoin' for crypto news
+        - 'AI artificial intelligence' for AI news
+        
+        Requires NEWSAPI_KEY in settings/environment.
+        
+        Args:
+            source: ContentSource with search query in feed_url
+            
+        Returns:
+            Number of new items created
+        """
+        try:
+            # Get API key from settings
+            api_key = getattr(settings, 'NEWSAPI_KEY', None) or os.environ.get('NEWSAPI_KEY')
+            
+            if not api_key:
+                logger.error("NEWSAPI_KEY not configured. Set it in .env or settings.")
+                raise ValueError("NEWSAPI_KEY not configured")
+            
+            query = str(source.feed_url).strip()
+            
+            # Build API URL
+            api_url = "https://newsapi.org/v2/everything"
+            params = {
+                'q': query,
+                'apiKey': api_key,
+                'language': 'en',
+                'sortBy': 'publishedAt',
+                'pageSize': 20,  # Fetch 20 articles per source
+            }
+            
+            logger.info(f"Fetching news from NewsAPI for: {query}")
+            
+            response = requests.get(api_url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get('status') != 'ok':
+                logger.error(f"NewsAPI error: {data.get('message', 'Unknown error')}")
+                return 0
+            
+            articles = data.get('articles', [])
+            
+            if not articles:
+                logger.warning(f"No articles found for query: {query}")
+                return 0
+            
+            logger.info(f"Found {len(articles)} articles for '{query}'")
+            
+            new_items = 0
+            
+            for article in articles:
+                try:
+                    # Skip articles without required fields
+                    if not article.get('url') or not article.get('title'):
+                        continue
+                    
+                    # Create GUID from URL
+                    guid = f"news_{hashlib.md5(article['url'].encode()).hexdigest()}"
+                    
+                    # Check if already exists
+                    if ContentItem.objects.filter(guid=guid).exists():
+                        logger.debug(f"Skipping duplicate article: {article.get('title', 'Unknown')[:50]}")
+                        continue
+                    
+                    # Get image URL
+                    image_url = article.get('urlToImage', '')
+                    
+                    # Download and upload image to S3
+                    storage_url = None
+                    storage_provider = 'none'
+                    
+                    if image_url and self.storage_service:
+                        try:
+                            temp_file_path = self._download_meme_image(image_url)  # Reuse image downloader
+                            
+                            if temp_file_path:
+                                ext = self._get_extension_from_url(image_url) or '.jpg'
+                                object_key = f"news/{source.name.lower().replace(' ', '-')}/{guid}{ext}"
+                                storage_url = self.storage_service.upload_file(temp_file_path, object_key)
+                                storage_provider = self.storage_provider
+                                logger.info(f"✓ Uploaded news image to {storage_provider}: {object_key}")
+                                
+                                # Clean up temp file
+                                if os.path.exists(temp_file_path):
+                                    os.unlink(temp_file_path)
+                        except Exception as e:
+                            logger.warning(f"Failed to upload news image: {e}")
+                    
+                    # Parse published date
+                    published_at = timezone.now()
+                    if article.get('publishedAt'):
+                        try:
+                            from dateutil import parser
+                            published_at = parser.parse(article['publishedAt'])
+                            if not published_at.tzinfo:
+                                published_at = timezone.make_aware(published_at)
+                        except:
+                            pass
+                    
+                    # Build description
+                    description = article.get('description', '') or ''
+                    content = article.get('content', '') or ''
+                    full_description = f"{description}\n\n{content}".strip()[:2000]
+                    
+                    # Create ContentItem
+                    content_item = ContentItem.objects.create(
+                        source=source,
+                        title=article.get('title', 'Untitled')[:500],
+                        description=full_description,
+                        url=article['url'],
+                        media_url=image_url or None,
+                        storage_url=storage_url or image_url or article['url'],
+                        storage_provider=storage_provider,
+                        published_at=published_at,
+                        guid=guid,
+                    )
+                    
+                    new_items += 1
+                    logger.info(f"✓ Created news article: {content_item.title[:50]}...")
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to process article: {e}")
+                    continue
+            
+            return new_items
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to fetch from NewsAPI: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to ingest news: {e}")
+            raise
 
