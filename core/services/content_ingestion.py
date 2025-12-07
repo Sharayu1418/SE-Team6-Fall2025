@@ -187,11 +187,14 @@ class ContentIngestionService:
     
     def _ingest_youtube_channel(self, source: ContentSource) -> int:
         """
-        Fetch videos from a YouTube channel/search query.
+        Fetch videos from a YouTube channel/playlist/search using yt-dlp.
         
         The feed_url for YouTube sources should be either:
-        - A YouTube channel URL (e.g., https://www.youtube.com/@channel)
+        - A YouTube channel URL (e.g., https://www.youtube.com/@TEDx)
+        - A YouTube playlist URL (e.g., https://www.youtube.com/playlist?list=...)
         - A search query prefixed with 'search:' (e.g., 'search:AI technology')
+        
+        Uses yt-dlp's native extraction instead of youtube-search-python.
         
         Args:
             source: ContentSource with YouTube channel/search info
@@ -200,99 +203,113 @@ class ContentIngestionService:
             Number of new items created
         """
         try:
-            from youtubesearchpython import VideosSearch, ChannelsSearch, Playlist
+            import yt_dlp
             
             feed_url = str(source.feed_url)
+            
+            # Build the URL for yt-dlp
+            if feed_url.startswith('search:'):
+                # Search query - use ytsearch
+                query = feed_url.replace('search:', '').strip()
+                yt_url = f"ytsearch10:{query}"  # Search for 10 videos
+                logger.info(f"Searching YouTube for: {query}")
+            elif feed_url.startswith('http'):
+                # Direct URL (channel or playlist)
+                yt_url = feed_url
+                logger.info(f"Fetching from YouTube URL: {feed_url}")
+            else:
+                # Assume it's a channel name, search for it
+                yt_url = f"ytsearch10:{feed_url}"
+                logger.info(f"Searching YouTube for channel: {feed_url}")
+            
+            # yt-dlp options for extracting metadata only (flat playlist)
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': 'in_playlist',  # Don't download, just get metadata
+                'playlistend': 10,  # Limit to 10 videos per source
+            }
+            
             videos = []
             
-            # Determine if it's a search query or channel
-            if feed_url.startswith('search:'):
-                # Search query
-                query = feed_url.replace('search:', '').strip()
-                logger.info(f"Searching YouTube for: {query}")
-                search = VideosSearch(query, limit=20)
-                result = search.result()
-                if result and 'result' in result:
-                    videos = result['result']
-            else:
-                # Try to get channel videos via search
-                channel_name = feed_url.split('/')[-1].replace('@', '')
-                logger.info(f"Fetching videos from channel: {channel_name}")
-                search = VideosSearch(f"{channel_name}", limit=20)
-                result = search.result()
-                if result and 'result' in result:
-                    videos = result['result']
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                try:
+                    result = ydl.extract_info(yt_url, download=False)
+                    
+                    if result is None:
+                        logger.warning(f"No results from yt-dlp for: {feed_url}")
+                        return 0
+                    
+                    # Handle different result types
+                    if 'entries' in result:
+                        # Playlist or search results
+                        videos = [v for v in result['entries'] if v is not None][:10]
+                    else:
+                        # Single video
+                        videos = [result]
+                        
+                except Exception as e:
+                    logger.error(f"yt-dlp extraction failed: {e}")
+                    return 0
             
             if not videos:
                 logger.warning(f"No videos found for: {feed_url}")
                 return 0
             
+            logger.info(f"Found {len(videos)} videos for {source.name}")
             new_items = 0
             
             for video in videos:
                 try:
+                    if video is None:
+                        continue
+                    
                     # Extract video data
                     video_id = video.get('id', '')
-                    title = video.get('title', 'Untitled')[:500]
+                    title = (video.get('title') or 'Untitled')[:500]
+                    
+                    if not video_id:
+                        continue
                     
                     # Create GUID from video ID
-                    guid = f"youtube_{video_id}" if video_id else self._create_guid(video.get('link', ''))
+                    guid = f"youtube_{video_id}"
                     
                     # Check if already exists
                     if ContentItem.objects.filter(guid=guid).exists():
                         logger.debug(f"Skipping duplicate: {title}")
                         continue
                     
-                    # Extract channel name
-                    channel_name = 'Unknown'
-                    if video.get('channel'):
-                        if isinstance(video['channel'], dict):
-                            channel_name = video['channel'].get('name', 'Unknown')
-                        else:
-                            channel_name = str(video['channel'])
-                    
-                    # Extract description
-                    description = ''
-                    if video.get('descriptionSnippet'):
-                        if isinstance(video['descriptionSnippet'], list) and len(video['descriptionSnippet']) > 0:
-                            if isinstance(video['descriptionSnippet'][0], dict):
-                                description = video['descriptionSnippet'][0].get('text', '')
-                        elif isinstance(video['descriptionSnippet'], str):
-                            description = video['descriptionSnippet']
-                    
-                    # Parse duration
-                    duration_seconds = None
-                    duration_str = video.get('duration', '')
-                    if duration_str:
-                        try:
-                            parts = duration_str.split(':')
-                            if len(parts) == 2:
-                                duration_seconds = int(parts[0]) * 60 + int(parts[1])
-                            elif len(parts) == 3:
-                                duration_seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
-                        except:
-                            pass
+                    # Extract metadata
+                    channel_name = video.get('channel') or video.get('uploader') or 'Unknown'
+                    description = (video.get('description') or '')[:2000]
+                    duration_seconds = video.get('duration')
+                    video_url = video.get('url') or f"https://www.youtube.com/watch?v={video_id}"
                     
                     # Create item data
                     item_data = {
                         'title': f"{title} - {channel_name}",
-                        'description': description[:2000],
-                        'url': video.get('link', ''),
+                        'description': description,
+                        'url': video_url,
                         'guid': guid,
-                        'published_at': timezone.now(),  # YouTube search doesn't give exact dates
-                        'media_url': video.get('link', ''),  # YouTube video URL
+                        'published_at': timezone.now(),
+                        'media_url': video_url,
                         'duration_seconds': duration_seconds,
                     }
                     
-                    # Download YouTube video using yt-dlp
-                    temp_file_path = self._download_youtube_video(item_data['url'])
+                    # Download YouTube video using yt-dlp (actual download)
+                    temp_file_path = self._download_youtube_video(video_url)
                     
                     storage_url = None
                     storage_provider = 'none'
                     
                     if temp_file_path and self.storage_service:
                         try:
-                            storage_url = self.storage_service.upload_file(temp_file_path, f"youtube/{guid}.mp4")
+                            # Get file extension
+                            ext = os.path.splitext(temp_file_path)[1] or '.mp4'
+                            storage_url = self.storage_service.upload_file(
+                                temp_file_path, 
+                                f"youtube/{guid}{ext}"
+                            )
                             storage_provider = self.storage_provider
                             logger.info(f"✓ Uploaded to {storage_provider}: {storage_url}")
                         except Exception as e:
@@ -301,8 +318,13 @@ class ContentIngestionService:
                             # Clean up temp file
                             if os.path.exists(temp_file_path):
                                 os.unlink(temp_file_path)
+                                # Also try to remove temp directory
+                                try:
+                                    os.rmdir(os.path.dirname(temp_file_path))
+                                except:
+                                    pass
                     
-                    # Create ContentItem
+                    # Create ContentItem (store YouTube URL if no S3 upload)
                     content_item = ContentItem.objects.create(
                         source=source,
                         title=item_data['title'],
@@ -326,7 +348,7 @@ class ContentIngestionService:
             return new_items
             
         except ImportError:
-            logger.error("youtube-search-python not installed. Install with: pip install youtube-search-python")
+            logger.error("yt-dlp not installed. Install with: pip install yt-dlp")
             raise
         except Exception as e:
             logger.error(f"Failed to fetch YouTube videos: {e}")
