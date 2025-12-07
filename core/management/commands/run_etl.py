@@ -37,8 +37,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--source-type',
             type=str,
-            choices=['podcast', 'video', 'article'],
-            help='Filter by source type (podcast, video, article)',
+            choices=['podcast', 'video', 'article', 'meme', 'news'],
+            help='Filter by source type (podcast, video, article, meme, news)',
         )
         parser.add_argument(
             '--provider',
