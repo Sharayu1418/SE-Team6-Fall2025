@@ -17,7 +17,37 @@ const AVAILABLE_TOPICS = [
   'entertainment',
   'sports',
   'health',
+  'memes',
+  'dank memes',
+  'wholesome memes',
+  'funny',
+  'world news',
+  'tech news',
 ];
+
+// Helper to get icon for source type
+const getSourceIcon = (type) => {
+  switch (type) {
+    case 'podcast': return '🎙️';
+    case 'meme': return '😂';
+    case 'news': return '🗞️';
+    case 'video': return '▶️';
+    case 'article': return '📰';
+    default: return '❓';
+  }
+};
+
+// Helper to get badge color for source type
+const getSourceBadgeClass = (type) => {
+  switch (type) {
+    case 'podcast': return 'bg-purple-100 text-purple-800';
+    case 'meme': return 'bg-yellow-100 text-yellow-800';
+    case 'news': return 'bg-blue-100 text-blue-800';
+    case 'video': return 'bg-red-100 text-red-800';
+    case 'article': return 'bg-green-100 text-green-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
 
 export default function Register() {
   const navigate = useNavigate();
@@ -58,9 +88,15 @@ export default function Register() {
         const response = await api.get('/sources/');
         // Handle paginated response from DRF
         const sources = response.data.results || response.data;
-        setAvailableSources(sources);
+        // Filter to only show podcast, meme, and news sources (not video/article which are deactivated)
+        const filteredSources = sources.filter(s => 
+          ['podcast', 'meme', 'news'].includes(s.type)
+        );
+        setAvailableSources(filteredSources);
       } catch (err) {
         console.error('Failed to fetch content sources:', err);
+        // Don't block registration if sources fail to load
+        setAvailableSources([]);
       } finally {
         setLoadingSources(false);
       }
@@ -338,7 +374,7 @@ export default function Register() {
             ) : availableSources.length === 0 ? (
               <p className="text-sm text-gray-500 py-4">No content sources available yet.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-96 overflow-y-auto">
                 {availableSources.map((source) => (
                   <div
                     key={source.id}
@@ -352,12 +388,9 @@ export default function Register() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
+                          <span className="text-xl">{getSourceIcon(source.type)}</span>
                           <h4 className="font-medium text-gray-900">{source.name}</h4>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            source.type === 'podcast' 
-                              ? 'bg-purple-100 text-purple-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getSourceBadgeClass(source.type)}`}>
                             {source.type}
                           </span>
                         </div>

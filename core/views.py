@@ -304,7 +304,7 @@ def login_user(request):
     })
 
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
     """
@@ -316,6 +316,11 @@ def logout_user(request):
     }
     """
     django_logout(request)
+    
+    # If it's a browser GET request, redirect to login
+    if request.method == 'GET':
+        from django.shortcuts import redirect
+        return redirect('/login/')
     
     return Response({
         'message': 'Logout successful'

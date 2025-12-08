@@ -20,8 +20,10 @@ const AVAILABLE_TOPICS = [
   'health',
   'memes',
   'dank memes',
-  'wholesome',
+  'wholesome memes',
   'funny',
+  'world news',
+  'tech news',
 ];
 
 export default function Preferences() {
