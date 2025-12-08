@@ -143,6 +143,7 @@ class DownloadItem(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     source = models.ForeignKey(ContentSource, on_delete=models.CASCADE)
     title = models.CharField(max_length=300)
+    description = models.TextField(blank=True, null=True, help_text="Content description or article summary")
     original_url = models.URLField()
     media_url = models.URLField(null=True, blank=True)
     local_file_path = models.CharField(max_length=500, null=True, blank=True, help_text="Local path to downloaded file")

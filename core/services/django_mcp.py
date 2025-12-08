@@ -150,6 +150,7 @@ class DjangoMCPService:
         title: str,
         original_url: str,
         available_from: datetime,
+        description: str = None,
     ) -> Optional[DownloadItemSchema]:
         """
         Create a new download item.
@@ -160,6 +161,7 @@ class DjangoMCPService:
             title: Item title
             original_url: Original content URL
             available_from: When the content should be available
+            description: Optional content description/summary
             
         Returns:
             DownloadItemSchema if created successfully, None otherwise
@@ -172,6 +174,7 @@ class DjangoMCPService:
                 user=user,
                 source=source,
                 title=title,
+                description=description,
                 original_url=original_url,
                 status='queued',
                 available_from=available_from,

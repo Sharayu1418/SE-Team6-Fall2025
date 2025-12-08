@@ -88,6 +88,7 @@ def queue_download(
             user_id=user_id,
             source=content_item.source,
             title=content_item.title,
+            description=content_item.description,  # Include article/meme description
             original_url=content_item.url,
             media_url=content_item.storage_url or content_item.media_url,  # Prefer storage_url
             status='queued',

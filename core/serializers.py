@@ -32,6 +32,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 class DownloadItemSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(source='source.name', read_only=True)
+    source_type = serializers.CharField(source='source.type', read_only=True)
     
     class Meta:
         model = DownloadItem

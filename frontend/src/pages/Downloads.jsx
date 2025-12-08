@@ -6,12 +6,38 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../api/client';
 
+// Helper to get icon for content type
+const getTypeIcon = (type) => {
+  const icons = {
+    podcast: '🎙️',
+    meme: '😂',
+    news: '🗞️',
+    video: '▶️',
+    article: '📰',
+  };
+  return icons[type] || '📄';
+};
+
+// Helper to get badge color for content type
+const getTypeBadgeClass = (type) => {
+  const classes = {
+    podcast: 'bg-purple-100 text-purple-800',
+    meme: 'bg-yellow-100 text-yellow-800',
+    news: 'bg-blue-100 text-blue-800',
+    video: 'bg-red-100 text-red-800',
+    article: 'bg-green-100 text-green-800',
+  };
+  return classes[type] || 'bg-gray-100 text-gray-800';
+};
+
 export default function Downloads() {
   const { user } = useAuth();
   const [downloads, setDownloads] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all'); // all, queued, downloading, ready, failed
+  const [filterType, setFilterType] = useState('all'); // all, podcast, meme, news
+  const [expandedDescriptions, setExpandedDescriptions] = useState({}); // Track expanded descriptions
 
   useEffect(() => {
     fetchDownloads();
@@ -95,9 +121,19 @@ export default function Downloads() {
     }
   };
 
-  const filteredDownloads = filterStatus === 'all' 
-    ? downloads 
-    : downloads.filter(d => d.status === filterStatus);
+  const toggleDescription = (downloadId) => {
+    setExpandedDescriptions(prev => ({
+      ...prev,
+      [downloadId]: !prev[downloadId]
+    }));
+  };
+
+  // Apply both status and type filters
+  const filteredDownloads = downloads.filter(d => {
+    const statusMatch = filterStatus === 'all' || d.status === filterStatus;
+    const typeMatch = filterType === 'all' || d.source_type === filterType;
+    return statusMatch && typeMatch;
+  });
 
   if (isLoading) {
     return (
@@ -125,30 +161,58 @@ export default function Downloads() {
       )}
 
       {/* Filter Buttons */}
-      <div className="mb-6 flex items-center space-x-4">
-        <span className="text-sm font-medium text-gray-700">Filter by status:</span>
-        <div className="flex space-x-2">
-          {['all', 'ready', 'downloading', 'queued', 'failed'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                filterStatus === status
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
+      <div className="mb-6 space-y-4">
+        {/* Status Filter */}
+        <div className="flex items-center space-x-4 flex-wrap gap-2">
+          <span className="text-sm font-medium text-gray-700">Status:</span>
+          <div className="flex space-x-2 flex-wrap gap-2">
+            {['all', 'ready', 'downloading', 'queued', 'failed'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  filterStatus === status
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="ml-auto">
-          <button
-            onClick={fetchDownloads}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Refresh
-          </button>
+        
+        {/* Type Filter */}
+        <div className="flex items-center space-x-4 flex-wrap gap-2">
+          <span className="text-sm font-medium text-gray-700">Type:</span>
+          <div className="flex space-x-2 flex-wrap gap-2">
+            {[
+              { key: 'all', label: 'All', icon: '🎯' },
+              { key: 'podcast', label: 'Podcasts', icon: '🎙️' },
+              { key: 'meme', label: 'Memes', icon: '😂' },
+              { key: 'news', label: 'News', icon: '🗞️' },
+            ].map((type) => (
+              <button
+                key={type.key}
+                onClick={() => setFilterType(type.key)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  filterType === type.key
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {type.icon} {type.label}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto">
+            <button
+              onClick={fetchDownloads}
+              className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -203,90 +267,145 @@ export default function Downloads() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredDownloads.map((download) => (
-            <div
-              key={download.id}
-              className="bg-white shadow rounded-lg p-6 border-l-4 border-blue-500"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {download.title}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(download.status)}`}>
-                      {getStatusLabel(download.status)}
-                    </span>
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <p>
-                      <span className="font-medium">Source:</span> {download.source_name || 'Unknown'}
-                    </p>
-                    <p>
-                      <span className="font-medium">Available from:</span> {formatDate(download.available_from)}
-                    </p>
-                    {download.file_size_bytes && (
-                      <p>
-                        <span className="font-medium">Size:</span> {formatFileSize(download.file_size_bytes)}
-                      </p>
-                    )}
-                    {download.error_message && (
-                      <p className="text-red-600">
-                        <span className="font-medium">Error:</span> {download.error_message}
-                      </p>
-                    )}
-                  </div>
-                  
-                  {download.original_url && (
-                    <a
-                      href={download.original_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-2 text-sm text-blue-600 hover:text-blue-800 inline-block"
-                    >
-                      View original →
-                    </a>
-                  )}
-                </div>
-                
-                <div className="ml-4 flex flex-col items-end space-y-2">
-                  {download.status === 'ready' && download.media_url && (
-                    <button
-                      onClick={() => handleDownload(download.id, download.media_url)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm font-medium"
-                    >
-                      Download
-                    </button>
-                  )}
-                  {download.status === 'ready' && download.media_url && (
-                    <a
-                      href={download.media_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-sm font-medium"
-                    >
-                      Play
-                    </a>
-                  )}
-                  {(download.status === 'downloading' || download.status === 'queued') && (
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <span>Processing...</span>
+          {filteredDownloads.map((download) => {
+            const isExpanded = expandedDescriptions[download.id];
+            const hasDescription = download.description && download.description.trim().length > 0;
+            const isNewsOrMeme = ['news', 'meme'].includes(download.source_type);
+            
+            return (
+              <div
+                key={download.id}
+                className={`bg-white shadow rounded-lg p-6 border-l-4 ${
+                  download.source_type === 'meme' ? 'border-yellow-500' :
+                  download.source_type === 'news' ? 'border-blue-500' :
+                  download.source_type === 'podcast' ? 'border-purple-500' :
+                  'border-gray-500'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {/* Title with type icon and badges */}
+                    <div className="flex items-center space-x-3 mb-2 flex-wrap gap-2">
+                      <span className="text-2xl">{getTypeIcon(download.source_type)}</span>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {download.title}
+                      </h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeBadgeClass(download.source_type)}`}>
+                        {download.source_type || 'unknown'}
+                      </span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(download.status)}`}>
+                        {getStatusLabel(download.status)}
+                      </span>
                     </div>
-                  )}
-                  {download.status === 'failed' && (
-                    <button
-                      onClick={fetchDownloads}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-medium"
-                    >
-                      Retry
-                    </button>
-                  )}
+                    
+                    {/* Description for news/meme items */}
+                    {hasDescription && (
+                      <div className="mb-3">
+                        <p className={`text-sm text-gray-700 ${isExpanded ? '' : 'line-clamp-3'}`}>
+                          {download.description}
+                        </p>
+                        {download.description.length > 200 && (
+                          <button
+                            onClick={() => toggleDescription(download.id)}
+                            className="text-sm text-blue-600 hover:text-blue-800 mt-1"
+                          >
+                            {isExpanded ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Meme/News image preview */}
+                    {isNewsOrMeme && download.media_url && download.status === 'ready' && (
+                      <div className="mb-3">
+                        <img 
+                          src={download.media_url} 
+                          alt={download.title}
+                          className="max-w-sm max-h-64 rounded-lg shadow-sm object-contain"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>
+                        <span className="font-medium">Source:</span> {download.source_name || 'Unknown'}
+                      </p>
+                      <p>
+                        <span className="font-medium">Available from:</span> {formatDate(download.available_from)}
+                      </p>
+                      {download.file_size_bytes && (
+                        <p>
+                          <span className="font-medium">Size:</span> {formatFileSize(download.file_size_bytes)}
+                        </p>
+                      )}
+                      {download.error_message && (
+                        <p className="text-red-600">
+                          <span className="font-medium">Error:</span> {download.error_message}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {download.original_url && (
+                      <a
+                        href={download.original_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 text-sm text-blue-600 hover:text-blue-800 inline-block"
+                      >
+                        {isNewsOrMeme ? 'Read full article →' : 'View original →'}
+                      </a>
+                    )}
+                  </div>
+                  
+                  <div className="ml-4 flex flex-col items-end space-y-2">
+                    {download.status === 'ready' && download.media_url && !isNewsOrMeme && (
+                      <button
+                        onClick={() => handleDownload(download.id, download.media_url)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm font-medium"
+                      >
+                        Download
+                      </button>
+                    )}
+                    {download.status === 'ready' && download.media_url && !isNewsOrMeme && (
+                      <a
+                        href={download.media_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-sm font-medium"
+                      >
+                        Play
+                      </a>
+                    )}
+                    {download.status === 'ready' && download.media_url && isNewsOrMeme && (
+                      <a
+                        href={download.media_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm font-medium"
+                      >
+                        View Full Image
+                      </a>
+                    )}
+                    {(download.status === 'downloading' || download.status === 'queued') && (
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <span>Processing...</span>
+                      </div>
+                    )}
+                    {download.status === 'failed' && (
+                      <button
+                        onClick={fetchDownloads}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm font-medium"
+                      >
+                        Retry
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
