@@ -20,4 +20,8 @@ urlpatterns = [
     path('auth/me/', views.current_user, name='current_user'),
     # Download file endpoint
     path('downloads/<int:download_id>/file/', views.download_file, name='download_file'),
+    # ETL Pipeline endpoints (for demo/presentation)
+    path('etl/trigger/', views.trigger_etl_pipeline, name='trigger_etl'),
+    path('etl/clear/', views.clear_content_pool, name='clear_content'),
+    path('etl/status/', views.get_etl_status, name='etl_status'),
 ]

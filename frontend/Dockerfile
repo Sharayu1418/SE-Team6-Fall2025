@@ -1,27 +1,30 @@
-FROM python:3.11-slim
+# Build stage
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Copy package files
+COPY package*.json ./
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN npm ci
 
-# Copy project
+# Copy source code
 COPY . .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+# Build for production
+RUN npm run build
 
-# Create non-root user
-RUN adduser --disabled-password --gecos '' appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Production stage - serve with nginx
+FROM nginx:alpine
 
-EXPOSE 8000
+# Copy built files from build stage
+COPY --from=build /app/dist /usr/share/nginx/html
 
-CMD ["gunicorn", "smartcache.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Copy nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -201,12 +201,14 @@ def register_user(request):
                 email=email
             )
             
-            # Create user preferences
-            UserPreference.objects.create(
+            # Create or update user preferences (signal may have already created default)
+            UserPreference.objects.update_or_create(
                 user=user,
-                topics=preferences_data.get('topics', []),
-                max_daily_items=preferences_data.get('max_daily_items', 10),
-                max_storage_mb=preferences_data.get('max_storage_mb', 500)
+                defaults={
+                    'topics': preferences_data.get('topics', []),
+                    'max_daily_items': preferences_data.get('max_daily_items', 10),
+                    'max_storage_mb': preferences_data.get('max_storage_mb', 500)
+                }
             )
             
             # Create subscriptions if any sources were selected
@@ -443,3 +445,153 @@ def download_file(request, download_id):
             {'error': str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+# ============================================================================
+# ETL Pipeline Trigger Endpoints (For Presentation/Demo)
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def trigger_etl_pipeline(request):
+    """
+    Manually trigger the ETL pipeline to fetch fresh content.
+    
+    This endpoint allows on-demand content ingestion for demos/presentations
+    instead of waiting for the hourly Celery Beat schedule.
+    
+    Options (in request body):
+    - source_type: Filter by type ('podcast', 'meme', 'news', or 'all')
+    - clear_old: If True, clears old ContentItem records first (default: False)
+    
+    Returns:
+        JSON with task status and results summary
+    """
+    from core.tasks import ingest_content_sources, manual_ingest_source
+    from core.models import ContentSource, ContentItem
+    
+    source_type = request.data.get('source_type', 'all')
+    clear_old = request.data.get('clear_old', False)
+    
+    try:
+        # Optionally clear old content first
+        if clear_old:
+            deleted_count = ContentItem.objects.all().delete()[0]
+            clear_message = f"Cleared {deleted_count} old content items. "
+        else:
+            clear_message = ""
+        
+        # Get sources to ingest
+        if source_type == 'all':
+            sources = ContentSource.objects.filter(is_active=True)
+        else:
+            sources = ContentSource.objects.filter(is_active=True, type=source_type)
+        
+        if not sources.exists():
+            return Response({
+                'status': 'warning',
+                'message': f'{clear_message}No active sources found for type: {source_type}'
+            })
+        
+        # Trigger ingestion for each source
+        results = []
+        for source in sources:
+            # Run synchronously for immediate feedback (or use .delay() for async)
+            task_result = manual_ingest_source(source.id)
+            results.append({
+                'source': source.name,
+                'type': source.type,
+                'result': task_result
+            })
+        
+        total_items = sum(r['result'].get('items_added', 0) for r in results if isinstance(r['result'], dict))
+        
+        return Response({
+            'status': 'success',
+            'message': f'{clear_message}ETL pipeline completed for {len(results)} sources.',
+            'total_items_added': total_items,
+            'results': results
+        })
+    
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def clear_content_pool(request):
+    """
+    Clear all content items from the pool.
+    
+    Useful before a demo to start fresh without old content.
+    Does NOT delete sources or subscriptions.
+    
+    Returns:
+        JSON with count of deleted items
+    """
+    from core.models import ContentItem, DownloadItem
+    
+    try:
+        # Delete all content items
+        content_deleted = ContentItem.objects.all().delete()[0]
+        
+        # Optionally clear download items too
+        clear_downloads = request.data.get('clear_downloads', False)
+        downloads_deleted = 0
+        if clear_downloads:
+            downloads_deleted = DownloadItem.objects.filter(user=request.user).delete()[0]
+        
+        return Response({
+            'status': 'success',
+            'message': 'Content pool cleared successfully.',
+            'content_items_deleted': content_deleted,
+            'download_items_deleted': downloads_deleted
+        })
+    
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_etl_status(request):
+    """
+    Get current ETL/content pool status.
+    
+    Returns counts of content items by source type and storage status.
+    """
+    from core.models import ContentSource, ContentItem
+    from django.db.models import Count
+    
+    try:
+        # Get content counts by source type
+        content_by_type = ContentItem.objects.values('source__type').annotate(
+            count=Count('id')
+        ).order_by('source__type')
+        
+        # Get content with storage (ready for download)
+        cached_count = ContentItem.objects.exclude(storage_url='').exclude(storage_url__isnull=True).count()
+        total_count = ContentItem.objects.count()
+        
+        # Get active sources
+        sources = ContentSource.objects.filter(is_active=True).values('name', 'type')
+        
+        return Response({
+            'status': 'success',
+            'total_content_items': total_count,
+            'cached_in_storage': cached_count,
+            'content_by_type': list(content_by_type),
+            'active_sources': list(sources)
+        })
+    
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
