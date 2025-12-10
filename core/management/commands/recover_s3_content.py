@@ -55,11 +55,26 @@ class Command(BaseCommand):
         # Get all sources for matching
         sources = {s.name.lower(): s for s in ContentSource.objects.all()}
         
+        # Create normalized name mapping (remove special chars)
+        sources_normalized = {}
+        for source in ContentSource.objects.all():
+            # Normalize: lowercase, remove parentheses, dashes, underscores
+            normalized = source.name.lower()
+            normalized = re.sub(r'[^a-z0-9\s]', '', normalized)  # Remove special chars
+            normalized = re.sub(r'\s+', '', normalized)  # Remove spaces
+            sources_normalized[normalized] = source
+            
+            # Also add without spaces
+            sources_normalized[source.name.lower().replace(' ', '-')] = source
+            sources_normalized[source.name.lower().replace(' ', '_')] = source
+        
         # Also create a mapping by type for fallback
         source_by_type = {}
         for source in ContentSource.objects.all():
             if source.type not in source_by_type:
                 source_by_type[source.type] = source
+        
+        self.stdout.write(f'Loaded {len(sources)} sources')
         
         for page in paginator.paginate(Bucket=bucket_name):
             for obj in page.get('Contents', []):
@@ -101,12 +116,30 @@ class Command(BaseCommand):
                 source_name_from_path = parts[1] if len(parts) > 1 else None
                 
                 if source_name_from_path:
-                    # Try exact match
-                    source_name_clean = source_name_from_path.replace('-', ' ').replace('_', ' ').lower()
-                    for name, src in sources.items():
-                        if source_name_clean in name or name in source_name_clean:
-                            source = src
-                            break
+                    # Normalize the path name
+                    path_normalized = source_name_from_path.lower()
+                    path_normalized_clean = re.sub(r'[^a-z0-9]', '', path_normalized)
+                    
+                    # Try normalized match
+                    if path_normalized_clean in sources_normalized:
+                        source = sources_normalized[path_normalized_clean]
+                    else:
+                        # Try partial match
+                        for name, src in sources.items():
+                            name_clean = re.sub(r'[^a-z0-9]', '', name)
+                            if path_normalized_clean in name_clean or name_clean in path_normalized_clean:
+                                source = src
+                                break
+                        
+                        # Try matching path parts
+                        if not source:
+                            path_words = set(re.findall(r'[a-z]+', path_normalized))
+                            for name, src in sources.items():
+                                name_words = set(re.findall(r'[a-z]+', name))
+                                # If most words match
+                                if len(path_words & name_words) >= min(2, len(path_words)):
+                                    source = src
+                                    break
                 
                 # Fallback to type-based source
                 if not source and content_type in source_by_type:
