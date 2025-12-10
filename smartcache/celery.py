@@ -16,9 +16,9 @@ app.autodiscover_tasks()
 
 # Celery Beat schedule for periodic tasks
 app.conf.beat_schedule = {
-    'ingest-content-hourly': {
+    'ingest-content-every-6-hours': {
         'task': 'core.tasks.ingest_content_sources',
-        'schedule': crontab(minute=0),  # Every hour at :00
+        'schedule': crontab(minute=0, hour='*/6'),  # Every 6 hours (0:00, 6:00, 12:00, 18:00)
     },
     'cleanup-old-content-weekly': {
         'task': 'core.tasks.cleanup_old_content',

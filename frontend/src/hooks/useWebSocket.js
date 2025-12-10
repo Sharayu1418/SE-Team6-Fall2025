@@ -20,11 +20,9 @@ export function useWebSocket(url) {
     setStatus('connecting');
     setMessages([]);
 
-    // Construct WebSocket URL - connect directly to Django backend
-    // In development, Django runs on port 8000
-    const backendHost = import.meta.env.VITE_API_URL || 'localhost:8000';
+    // Construct WebSocket URL - use same host as page (nginx proxies /ws/ to backend)
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${backendHost}${url}`;
+    const wsUrl = `${protocol}//${window.location.host}${url}`;
 
     console.log('Connecting to WebSocket:', wsUrl);
     wsRef.current = new WebSocket(wsUrl);
