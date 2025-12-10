@@ -6,6 +6,7 @@ Each agent has a specific role defined by its system_message.
 """
 
 import logging
+import os
 
 try:
     from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
@@ -55,9 +56,13 @@ def create_ollama_client() -> "OpenAIChatCompletionClient":
         vision=False,
     )
     
+    # Get Ollama URL from environment (for Docker: use host.docker.internal or host IP)
+    ollama_base_url = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+    ollama_model = os.getenv('OLLAMA_MODEL', 'llama3.1')
+    
     return OpenAIChatCompletionClient(
-        model="llama3.1",
-        base_url="http://localhost:11434/v1",
+        model=ollama_model,
+        base_url=f"{ollama_base_url}/v1",
         api_key="ollama",  # Required but value doesn't matter for local Ollama
         temperature=0.7,
         model_capabilities=capabilities,
