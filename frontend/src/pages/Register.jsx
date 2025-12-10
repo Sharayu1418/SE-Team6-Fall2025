@@ -85,7 +85,8 @@ export default function Register() {
     const fetchSources = async () => {
       try {
         setLoadingSources(true);
-        const response = await api.get('/sources/');
+        // Fetch all sources (increase page size to get all in one request)
+        const response = await api.get('/sources/?page_size=200');
         // Handle paginated response from DRF
         const sources = response.data.results || response.data;
         // Filter to only show podcast, meme, and news sources (not video/article which are deactivated)

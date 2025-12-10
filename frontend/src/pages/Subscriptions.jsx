@@ -23,10 +23,10 @@ export default function Subscriptions() {
       setIsLoading(true);
       setError(null);
       
-      // Fetch both sources and subscriptions
+      // Fetch both sources and subscriptions (page_size=200 to get all)
       const [sourcesRes, subsRes] = await Promise.all([
-        api.get('/sources/'),
-        api.get('/subscriptions/')
+        api.get('/sources/?page_size=200'),
+        api.get('/subscriptions/?page_size=200')
       ]);
       
       // Handle both paginated ({results: [...]}) and non-paginated ([...]) responses
