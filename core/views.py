@@ -12,14 +12,6 @@ from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
-
-
-class FlexiblePageNumberPagination(PageNumberPagination):
-    """Pagination class that allows client to specify page_size."""
-    page_size = 20
-    page_size_query_param = 'page_size'
-    max_page_size = 500
 import os
 from .models import (
     UserPreference, CommuteWindow, ContentSource, 
