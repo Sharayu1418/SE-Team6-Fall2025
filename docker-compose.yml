@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Redis - Message broker for Celery
   redis:
@@ -26,7 +24,7 @@ services:
     environment:
       - DEBUG=True
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - DATABASE_URL=sqlite:///db.sqlite3
+      - DATABASE_URL=sqlite:////app/db.sqlite3
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -40,7 +38,8 @@ services:
       # NewsAPI key for news sources
       - NEWSAPI_KEY=${NEWSAPI_KEY:-}
       # Ollama for AI agents
-      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
@@ -64,7 +63,7 @@ services:
     environment:
       - DEBUG=True
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - DATABASE_URL=sqlite:///db.sqlite3
+      - DATABASE_URL=sqlite:////app/db.sqlite3
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -73,7 +72,8 @@ services:
       - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME:-}
       - AWS_S3_REGION=${AWS_S3_REGION:-us-east-1}
       - NEWSAPI_KEY=${NEWSAPI_KEY:-}
-      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
     volumes:
       - .:/app
       - media_volume:/app/media
@@ -96,7 +96,7 @@ services:
   #   environment:
   #     - DEBUG=True
   #     - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-  #     - DATABASE_URL=sqlite:///db.sqlite3
+  #     - DATABASE_URL=sqlite:////app/db.sqlite3
   #     - REDIS_URL=redis://redis:6379/0
   #     - CELERY_BROKER_URL=redis://redis:6379/0
   #     - CELERY_RESULT_BACKEND=redis://redis:6379/0

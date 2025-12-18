@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from core.models import ContentSource
 
 class Command(BaseCommand):
-    help = 'Seed default content sources'
+    help = 'Seed default content sources (podcasts, news, memes)'
 
     def handle(self, *args, **options):
         sources = [
@@ -294,322 +294,62 @@ class Command(BaseCommand):
                 'policy': 'cache_allowed'
             },
             
-            # ========== ARTICLES ==========
-            
-            # Articles - News (US & World)
+            # ========== NEWS (NewsAPI) ==========
             {
-                'name': 'BBC World News',
-                'type': 'article',
-                'feed_url': 'https://feeds.bbci.co.uk/news/world/rss.xml',
-                'policy': 'metadata_only'
+                'name': 'Tech News',
+                'type': 'news',
+                'feed_url': 'technology',
+                'policy': 'cache_allowed',
             },
             {
-                'name': 'Reuters Top News',
-                'type': 'article',
-                'feed_url': 'https://www.reutersagency.com/feed/',
-                'policy': 'metadata_only'
+                'name': 'AI & Machine Learning News',
+                'type': 'news',
+                'feed_url': 'artificial intelligence OR machine learning',
+                'policy': 'cache_allowed',
             },
             {
-                'name': 'The Guardian World',
-                'type': 'article',
-                'feed_url': 'https://www.theguardian.com/world/rss',
-                'policy': 'metadata_only'
+                'name': 'Science News',
+                'type': 'news',
+                'feed_url': 'science discovery research',
+                'policy': 'cache_allowed',
             },
             {
-                'name': 'NPR News',
-                'type': 'article',
-                'feed_url': 'https://feeds.npr.org/1001/rss.xml',
-                'policy': 'metadata_only'
+                'name': 'Business News',
+                'type': 'news',
+                'feed_url': 'business finance stocks',
+                'policy': 'cache_allowed',
             },
             {
-                'name': 'The New York Times World',
-                'type': 'article',
-                'feed_url': 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
-                'policy': 'metadata_only'
+                'name': 'World News',
+                'type': 'news',
+                'feed_url': 'world news international',
+                'policy': 'cache_allowed',
             },
             {
-                'name': 'Washington Post World News',
-                'type': 'article',
-                'feed_url': 'https://feeds.washingtonpost.com/rss/world',
-                'policy': 'metadata_only'
+                'name': 'Entertainment News',
+                'type': 'news',
+                'feed_url': 'entertainment movies music celebrity',
+                'policy': 'cache_allowed',
             },
             {
-                'name': 'CNN Top Stories',
-                'type': 'article',
-                'feed_url': 'http://rss.cnn.com/rss/cnn_topstories.rss',
-                'policy': 'metadata_only'
+                'name': 'Sports News',
+                'type': 'news',
+                'feed_url': 'sports NFL NBA MLB soccer',
+                'policy': 'cache_allowed',
             },
             {
-                'name': 'Associated Press News',
-                'type': 'article',
-                'feed_url': 'https://rssnews.in/feed/apnews/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Al Jazeera English',
-                'type': 'article',
-                'feed_url': 'https://www.aljazeera.com/xml/rss/all.xml',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'The Economist',
-                'type': 'article',
-                'feed_url': 'https://www.economist.com/rss',
-                'policy': 'metadata_only'
+                'name': 'Health News',
+                'type': 'news',
+                'feed_url': 'health medicine wellness',
+                'policy': 'cache_allowed',
             },
             
-            # Articles - Tech & Startups
+            # ========== MEMES (Reddit) ==========
             {
-                'name': 'Hacker News Frontpage',
-                'type': 'article',
-                'feed_url': 'https://hnrss.org/frontpage',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Ars Technica',
-                'type': 'article',
-                'feed_url': 'https://feeds.arstechnica.com/arstechnica/index',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'TechCrunch',
-                'type': 'article',
-                'feed_url': 'https://techcrunch.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Wired',
-                'type': 'article',
-                'feed_url': 'https://www.wired.com/feed/rss',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'The Verge',
-                'type': 'article',
-                'feed_url': 'https://www.theverge.com/rss/index.xml',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Engadget',
-                'type': 'article',
-                'feed_url': 'https://www.engadget.com/rss.xml',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'MIT Technology Review',
-                'type': 'article',
-                'feed_url': 'https://www.technologyreview.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'VentureBeat',
-                'type': 'article',
-                'feed_url': 'https://venturebeat.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'CNET',
-                'type': 'article',
-                'feed_url': 'https://www.cnet.com/rss/news/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Mashable Tech',
-                'type': 'article',
-                'feed_url': 'https://mashable.com/feeds/rss/tech',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Hacker News Best',
-                'type': 'article',
-                'feed_url': 'https://hnrss.org/best',
-                'policy': 'metadata_only'
-            },
-            
-            # Articles - Science & Space
-            {
-                'name': 'NASA Breaking News',
-                'type': 'article',
-                'feed_url': 'https://www.nasa.gov/rss/dyn/breaking_news.rss',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Scientific American',
-                'type': 'article',
-                'feed_url': 'https://www.scientificamerican.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Science Daily',
-                'type': 'article',
-                'feed_url': 'https://www.sciencedaily.com/rss/all.xml',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Nature News',
-                'type': 'article',
-                'feed_url': 'https://www.nature.com/nature.rss',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Phys.org',
-                'type': 'article',
-                'feed_url': 'https://phys.org/rss-feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Live Science',
-                'type': 'article',
-                'feed_url': 'https://www.livescience.com/feeds/all',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Space.com',
-                'type': 'article',
-                'feed_url': 'https://www.space.com/feeds/all',
-                'policy': 'metadata_only'
-            },
-            
-            # Articles - Business & Finance
-            {
-                'name': 'Bloomberg',
-                'type': 'article',
-                'feed_url': 'https://feeds.bloomberg.com/markets/news.rss',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Financial Times',
-                'type': 'article',
-                'feed_url': 'https://www.ft.com/?format=rss',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Forbes',
-                'type': 'article',
-                'feed_url': 'https://www.forbes.com/real-time/feed2/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Wall Street Journal',
-                'type': 'article',
-                'feed_url': 'https://feeds.a.dj.com/rss/RSSWorldNews.xml',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'CNBC Top News',
-                'type': 'article',
-                'feed_url': 'https://www.cnbc.com/id/100003114/device/rss/rss.html',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Business Insider',
-                'type': 'article',
-                'feed_url': 'https://www.businessinsider.com/rss',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Harvard Business Review',
-                'type': 'article',
-                'feed_url': 'https://feeds.hbr.org/harvardbusiness',
-                'policy': 'metadata_only'
-            },
-            
-            # Articles - Entertainment & Pop Culture
-            {
-                'name': 'Entertainment Weekly',
-                'type': 'article',
-                'feed_url': 'https://ew.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Variety',
-                'type': 'article',
-                'feed_url': 'https://variety.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'The Hollywood Reporter',
-                'type': 'article',
-                'feed_url': 'https://www.hollywoodreporter.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'IndieWire',
-                'type': 'article',
-                'feed_url': 'https://www.indiewire.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Polygon',
-                'type': 'article',
-                'feed_url': 'https://www.polygon.com/rss/index.xml',
-                'policy': 'metadata_only'
-            },
-            
-            # Articles - Sports
-            {
-                'name': 'ESPN Top Headlines',
-                'type': 'article',
-                'feed_url': 'https://www.espn.com/espn/rss/news',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Bleacher Report',
-                'type': 'article',
-                'feed_url': 'https://bleacherreport.com/articles/feed',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'The Athletic',
-                'type': 'article',
-                'feed_url': 'https://theathletic.com/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Sports Illustrated',
-                'type': 'article',
-                'feed_url': 'https://www.si.com/.rss/si/all',
-                'policy': 'metadata_only'
-            },
-            
-            # Articles - Health & Medicine
-            {
-                'name': 'Medical News Today',
-                'type': 'article',
-                'feed_url': 'https://www.medicalnewstoday.com/rss',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'WebMD Health News',
-                'type': 'article',
-                'feed_url': 'https://rssfeeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Healthline',
-                'type': 'article',
-                'feed_url': 'https://www.healthline.com/rss',
-                'policy': 'metadata_only'
-            },
-            
-            # Articles - Environment & Climate
-            {
-                'name': 'Inside Climate News',
-                'type': 'article',
-                'feed_url': 'https://insideclimatenews.org/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'Grist',
-                'type': 'article',
-                'feed_url': 'https://grist.org/feed/',
-                'policy': 'metadata_only'
-            },
-            {
-                'name': 'National Geographic',
-                'type': 'article',
-                'feed_url': 'https://www.nationalgeographic.com/rss/',
-                'policy': 'metadata_only'
+                'name': 'Wholesome Memes',
+                'type': 'meme',
+                'feed_url': 'https://reddit.com/r/wholesomememes',
+                'policy': 'cache_allowed',
             },
         ]
         
@@ -625,7 +365,7 @@ class Command(BaseCommand):
             if created:
                 created_count += 1
                 self.stdout.write(
-                    self.style.SUCCESS(f'Created: {source.name}')
+                    self.style.SUCCESS(f'✓ Created: {source.name} ({source_data["type"]})')
                 )
             else:
                 # Update existing source
@@ -635,11 +375,24 @@ class Command(BaseCommand):
                 source.save()
                 updated_count += 1
                 self.stdout.write(
-                    self.style.WARNING(f'Updated: {source.name}')
+                    self.style.WARNING(f'↻ Updated: {source.name}')
                 )
         
+        # Delete article sources (metadata_only)
+        deleted_count, _ = ContentSource.objects.filter(type='article').delete()
+        if deleted_count:
+            self.stdout.write(
+                self.style.WARNING(f'🗑 Deleted {deleted_count} article sources')
+            )
+        
+        self.stdout.write('')
         self.stdout.write(
             self.style.SUCCESS(
-                f'Seeding complete: {created_count} created, {updated_count} updated'
+                f'✅ Seeding complete: {created_count} created, {updated_count} updated, {deleted_count} deleted'
             )
         )
+        self.stdout.write('')
+        self.stdout.write('Content types seeded:')
+        self.stdout.write(f'  📻 Podcasts: {len([s for s in sources if s["type"] == "podcast"])}')
+        self.stdout.write(f'  📰 News: {len([s for s in sources if s["type"] == "news"])}')
+        self.stdout.write(f'  😂 Memes: {len([s for s in sources if s["type"] == "meme"])}')

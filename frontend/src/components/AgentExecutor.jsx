@@ -3,17 +3,49 @@
  * 
  * Provides a button to trigger the RoundRobinGroupChat agents
  * and displays real-time updates via WebSocket.
+ * 
+ * Auto-downloads files to user's device when content is ready.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
+
+// Helper to format file size
+const formatFileSize = (bytes) => {
+  if (!bytes) return '';
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(2)} MB`;
+};
 
 export default function AgentExecutor() {
   const { user } = useAuth();
   const { messages, status, connect, disconnect, send, clearMessages } = useWebSocket('/ws/agents/');
   const [maxItems, setMaxItems] = useState(5);
   const [executionSummary, setExecutionSummary] = useState(null);
+  const [autoDownloads, setAutoDownloads] = useState([]); // Track auto-downloaded files
+
+  // Auto-trigger browser download
+  const triggerBrowserDownload = useCallback((fileUrl, title, downloadId) => {
+    try {
+      // Create a hidden anchor element
+      const link = document.createElement('a');
+      link.href = fileUrl;
+      link.download = title || `download_${downloadId}`;
+      link.style.display = 'none';
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log(`Auto-download triggered for: ${title}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to trigger auto-download:', error);
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     // Cleanup on unmount
@@ -25,6 +57,7 @@ export default function AgentExecutor() {
   const handleExecute = () => {
     clearMessages();
     setExecutionSummary(null);
+    setAutoDownloads([]); // Clear previous auto-downloads
     connect();
   };
 
@@ -38,12 +71,40 @@ export default function AgentExecutor() {
     }
   }, [status, maxItems, send]);
 
+  // Handle auto-downloads when download_ready messages arrive
+  useEffect(() => {
+    const downloadReadyMessages = messages.filter((m) => m.type === 'download_ready');
+    
+    downloadReadyMessages.forEach((msg) => {
+      // Check if we already processed this download
+      if (!autoDownloads.some((d) => d.download_id === msg.download_id)) {
+        // Trigger browser download
+        const success = triggerBrowserDownload(msg.file_url, msg.title, msg.download_id);
+        
+        // Track this download
+        setAutoDownloads((prev) => [
+          ...prev,
+          {
+            download_id: msg.download_id,
+            title: msg.title,
+            source_name: msg.source_name,
+            source_type: msg.source_type,
+            file_size: msg.file_size,
+            success,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+      }
+    });
+  }, [messages, autoDownloads, triggerBrowserDownload]);
+
   useEffect(() => {
     // Check for execution complete message
     const completeMsg = messages.find((m) => m.type === 'execution_complete');
     if (completeMsg) {
       setExecutionSummary(completeMsg.summary);
-      setTimeout(() => disconnect(), 1000);
+      // Keep connection open longer to receive download_ready messages
+      setTimeout(() => disconnect(), 5000);
     }
   }, [messages, disconnect]);
 
@@ -92,6 +153,17 @@ export default function AgentExecutor() {
           <div key={index} className="text-sm border-l-4 border-purple-300 pl-3 py-2">
             <span className="font-semibold text-purple-700">Download #{msg.download_id}:</span>{' '}
             {msg.title} ({msg.source}) - <span className="text-xs">{msg.status}</span>
+          </div>
+        );
+
+      case 'download_ready':
+        return (
+          <div key={index} className="text-sm border-l-4 border-green-400 pl-3 py-2 bg-green-50">
+            <span className="font-semibold text-green-700">⬇️ Auto-downloading:</span>{' '}
+            {msg.title}
+            <span className="text-xs text-gray-500 ml-2">
+              ({msg.source_name} • {formatFileSize(msg.file_size)})
+            </span>
           </div>
         );
 
@@ -182,6 +254,49 @@ export default function AgentExecutor() {
                 <div className="text-xs text-gray-600">Failed</div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Auto-Downloads Summary */}
+        {autoDownloads.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-blue-800 mb-2">
+              📥 Auto-Downloaded to Your Device ({autoDownloads.length} files)
+            </h3>
+            <div className="space-y-2">
+              {autoDownloads.map((download) => (
+                <div
+                  key={download.download_id}
+                  className="flex items-center justify-between text-sm bg-white rounded p-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg">
+                      {download.source_type === 'podcast' ? '🎙️' :
+                       download.source_type === 'meme' ? '😂' :
+                       download.source_type === 'news' ? '📰' : '📄'}
+                    </span>
+                    <div>
+                      <p className="font-medium text-gray-900 truncate max-w-xs">
+                        {download.title}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {download.source_name} • {formatFileSize(download.file_size)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    download.success 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {download.success ? '✓ Saved' : '✗ Failed'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-blue-600 mt-2">
+              💡 Files are saved to your browser's Downloads folder
+            </p>
           </div>
         )}
 

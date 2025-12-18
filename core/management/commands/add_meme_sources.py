@@ -13,21 +13,11 @@ class Command(BaseCommand):
     help = 'Add Meme sources (Reddit subreddits) to the database'
 
     def handle(self, *args, **options):
-        # Meme sources - subreddit names
+        # Meme sources - subreddit names (only wholesome memes)
         meme_sources = [
-            {
-                'name': 'Dank Memes',
-                'feed_url': 'dankmemes',
-                'policy': 'cache_allowed',
-            },
             {
                 'name': 'Wholesome Memes',
                 'feed_url': 'wholesomememes',
-                'policy': 'cache_allowed',
-            },
-            {
-                'name': 'Funny Memes',
-                'feed_url': 'memes',
                 'policy': 'cache_allowed',
             },
         ]

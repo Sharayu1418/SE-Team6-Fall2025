@@ -18,9 +18,7 @@ const AVAILABLE_TOPICS = [
   'sports',
   'health',
   'memes',
-  'dank memes',
   'wholesome memes',
-  'funny',
   'world news',
   'tech news',
 ];

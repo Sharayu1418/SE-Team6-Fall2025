@@ -124,8 +124,10 @@ class AgentExecutionConsumer(AsyncWebsocketConsumer):
             }))
             
             # Create team
+            # Need at least 6 turns minimum: Discovery recommends -> Download queues -> Download processes
+            # Plus extra turns for multi-item scenarios
             team = await database_sync_to_async(create_round_robin_team)(
-                max_turns=max_items * 2  # Allow enough turns for discovery and download
+                max_turns=max(6, max_items * 3)  # Minimum 6 turns, or 3 per item
             )
             
             # Run team (this is async in the new API)
@@ -196,7 +198,27 @@ class AgentExecutionConsumer(AsyncWebsocketConsumer):
             'failed': downloads.filter(status='failed').count(),
         }
     
-    # Handler for group messages (not used in this implementation)
+    # Handler for group messages
     async def agent_message(self, event):
         """Handle agent message from group."""
         await self.send(text_data=json.dumps(event))
+    
+    async def download_ready(self, event):
+        """
+        Handle download_ready message from Celery task.
+        
+        This is triggered when a file has been downloaded to the server
+        and is ready for the frontend to auto-trigger a browser download.
+        
+        The frontend will receive this message and automatically start
+        downloading the file to the user's device.
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'download_ready',
+            'download_id': event.get('download_id'),
+            'title': event.get('title'),
+            'source_name': event.get('source_name'),
+            'source_type': event.get('source_type'),
+            'file_url': event.get('file_url'),
+            'file_size': event.get('file_size'),
+        }))

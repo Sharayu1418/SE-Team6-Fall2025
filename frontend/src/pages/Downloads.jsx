@@ -94,9 +94,36 @@ export default function Downloads() {
     return date.toLocaleString();
   };
 
-  const handleDownload = async (downloadId, mediaUrl) => {
+  const handleDownload = async (downloadId, mediaUrl, sourceType) => {
     try {
-      // Try to download via the API endpoint first
+      // For memes and news, download directly from media URL
+      if (['meme', 'news'].includes(sourceType) && mediaUrl) {
+        const download = downloads.find(d => d.id === downloadId);
+        const title = download?.title || 'download';
+        
+        // Fetch the image and trigger download
+        const response = await fetch(mediaUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // Get file extension from URL or content type
+        const urlPath = mediaUrl.split('?')[0];
+        let extension = urlPath.split('.').pop();
+        if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension?.toLowerCase())) {
+          extension = 'jpg'; // Default for images
+        }
+        
+        link.download = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.${extension}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+      
+      // For podcasts and other content, try API endpoint first
       const response = await api.get(`/downloads/${downloadId}/file/`, {
         responseType: 'blob',
       });
@@ -298,8 +325,43 @@ export default function Downloads() {
                       </span>
                     </div>
                     
-                    {/* Description for news/meme items */}
-                    {hasDescription && (
+                    {/* News article overview section */}
+                    {download.source_type === 'news' && hasDescription && (
+                      <div className="mb-3 bg-gray-50 rounded-lg p-3 border-l-2 border-blue-400">
+                        <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Overview</p>
+                        <p className={`text-sm text-gray-700 leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
+                          {download.description}
+                        </p>
+                        {download.description.length > 200 && (
+                          <button
+                            onClick={() => toggleDescription(download.id)}
+                            className="text-sm text-blue-600 hover:text-blue-800 mt-2 font-medium"
+                          >
+                            {isExpanded ? '↑ Show less' : '↓ Read more'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Meme description (simpler style) */}
+                    {download.source_type === 'meme' && hasDescription && (
+                      <div className="mb-3">
+                        <p className={`text-sm text-gray-600 italic ${isExpanded ? '' : 'line-clamp-2'}`}>
+                          {download.description}
+                        </p>
+                        {download.description.length > 150 && (
+                          <button
+                            onClick={() => toggleDescription(download.id)}
+                            className="text-sm text-blue-600 hover:text-blue-800 mt-1"
+                          >
+                            {isExpanded ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Podcast description */}
+                    {!isNewsOrMeme && hasDescription && (
                       <div className="mb-3">
                         <p className={`text-sm text-gray-700 ${isExpanded ? '' : 'line-clamp-3'}`}>
                           {download.description}
@@ -359,40 +421,55 @@ export default function Downloads() {
                   </div>
                   
                   <div className="ml-4 flex flex-col items-end space-y-2">
+                    {/* Podcast/Video: Download and Play buttons */}
                     {download.status === 'ready' && download.media_url && !isNewsOrMeme && (
-                      <button
-                        onClick={() => handleDownload(download.id, download.media_url)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm font-medium"
-                      >
-                        Download
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleDownload(download.id, download.media_url, download.source_type)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm font-medium"
+                        >
+                          Download
+                        </button>
+                        <a
+                          href={download.media_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-sm font-medium"
+                        >
+                          Play
+                        </a>
+                      </>
                     )}
-                    {download.status === 'ready' && download.media_url && !isNewsOrMeme && (
-                      <a
-                        href={download.media_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-sm font-medium"
-                      >
-                        Play
-                      </a>
-                    )}
+                    
+                    {/* Meme/News: Download and View buttons */}
                     {download.status === 'ready' && download.media_url && isNewsOrMeme && (
-                      <a
-                        href={download.media_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm font-medium"
-                      >
-                        View Full Image
-                      </a>
+                      <>
+                        <button
+                          onClick={() => handleDownload(download.id, download.media_url, download.source_type)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 text-sm font-medium"
+                        >
+                          Download
+                        </button>
+                        <a
+                          href={download.media_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 text-sm font-medium"
+                        >
+                          View Full
+                        </a>
+                      </>
                     )}
+                    
+                    {/* Processing state */}
                     {(download.status === 'downloading' || download.status === 'queued') && (
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                         <span>Processing...</span>
                       </div>
                     )}
+                    
+                    {/* Failed state */}
                     {download.status === 'failed' && (
                       <button
                         onClick={fetchDownloads}
@@ -414,8 +491,10 @@ export default function Downloads() {
         <h3 className="text-sm font-semibold text-gray-900 mb-2">💡 How Downloads Work</h3>
         <ul className="text-sm text-gray-600 space-y-1">
           <li>• Use the Agent Executor on the Dashboard to discover and queue content</li>
-          <li>• Downloads are automatically processed in the background</li>
-          <li>• Ready downloads can be played or downloaded for offline access</li>
+          <li>• <strong>Auto-Download:</strong> Files are automatically saved to your Downloads folder when ready</li>
+          <li>• Content is matched based on your <strong>subscriptions</strong> and filtered by your <strong>preferences</strong></li>
+          <li>• Podcasts can be played directly or downloaded for offline listening</li>
+          <li>• Memes and news images can be downloaded or viewed in full size</li>
           <li>• Failed downloads can be retried by refreshing the page</li>
         </ul>
       </div>

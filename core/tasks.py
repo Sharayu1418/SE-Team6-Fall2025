@@ -8,10 +8,47 @@ import os
 from pathlib import Path
 import re
 
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
 from core.models import ContentSource, ContentItem, DownloadItem
 from core.services.content_ingestion import ContentIngestionService
 
 logger = logging.getLogger(__name__)
+
+
+def notify_download_ready(download_item, file_size: int):
+    """
+    Send WebSocket notification to frontend when download is ready.
+    This triggers automatic browser download on the client side.
+    
+    Args:
+        download_item: The DownloadItem that completed downloading
+        file_size: Size of the downloaded file in bytes
+    """
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            logger.warning("Channel layer not available, skipping WebSocket notification")
+            return
+        
+        # Send to user's agent execution room
+        async_to_sync(channel_layer.group_send)(
+            f'agent_execution_{download_item.user_id}',
+            {
+                'type': 'download_ready',
+                'download_id': download_item.id,
+                'title': download_item.title,
+                'source_name': download_item.source.name if download_item.source else 'Unknown',
+                'source_type': download_item.source.type if download_item.source else 'unknown',
+                'file_url': f'/api/downloads/{download_item.id}/file/',
+                'file_size': file_size,
+            }
+        )
+        logger.info(f"WebSocket notification sent for DownloadItem {download_item.id}")
+    except Exception as e:
+        # Don't fail the download if notification fails
+        logger.warning(f"Failed to send WebSocket notification: {e}")
 
 
 @shared_task
@@ -246,6 +283,9 @@ def download_content_file(download_item_id: int):
         download_item.save()
         
         logger.info(f"Download complete for DownloadItem {download_item_id}: {file_path} ({total_size / (1024*1024):.2f}MB)")
+        
+        # Send WebSocket notification to trigger auto-download on frontend
+        notify_download_ready(download_item, total_size)
         
         return {
             'status': 'success',
